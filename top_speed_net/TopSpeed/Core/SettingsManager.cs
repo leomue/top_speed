@@ -258,7 +258,6 @@ namespace TopSpeed.Core
             if (TryNext(values, ref index, out value)) settings.MenuWrapNavigation = value != 0;
             if (TryNext(values, ref index, out value)) settings.MenuNavigatePanning = value != 0;
             if (TryNext(values, ref index, out value)) settings.AutoDetectAudioDeviceFormat = value != 0;
-            if (TryNext(values, ref index, out value)) { }
             if (TryNext(values, ref index, out value)) settings.JoystickReportWheelAngle = AsJoystick(value, settings.JoystickReportWheelAngle);
             if (TryNext(values, ref index, out value)) settings.JoystickReportHeading = AsJoystick(value, settings.JoystickReportHeading);
             if (TryNext(values, ref index, out value)) settings.KeyReportWheelAngle = AsKey(value, settings.KeyReportWheelAngle);
