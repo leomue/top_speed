@@ -213,7 +213,7 @@ namespace TS.Audio
             _listenerState = new ListenerState(
                 ToIpl(right),
                 ToIpl(normUp),
-                new IPL.Vector3 { X = -normForward.X, Y = -normForward.Y, Z = -normForward.Z },
+                ToIpl(normForward),
                 ToIpl(position));
         }
 
@@ -518,37 +518,52 @@ namespace TS.Audio
                 handle.ClearReflectionIr();
             }
 
-            if (!hasRoom)
+            if (reflections.Type != IPL.ReflectionEffectType.Parametric &&
+                reflections.Type != IPL.ReflectionEffectType.Hybrid)
             {
-                if (reflections.Type == IPL.ReflectionEffectType.Parametric ||
-                    reflections.Type == IPL.ReflectionEffectType.Hybrid)
-                {
-                    var timeLow = reflections.ReverbTimes[0];
-                    var timeMid = reflections.ReverbTimes[1];
-                    var timeHigh = reflections.ReverbTimes[2];
-                    var eqLow = reflections.Eq[0];
-                    var eqMid = reflections.Eq[1];
-                    var eqHigh = reflections.Eq[2];
-                    var delay = reflections.Delay;
-                    handle.ApplyReflectionSimulation(timeLow, timeMid, timeHigh, eqLow, eqMid, eqHigh, delay);
-                }
                 return;
             }
 
-            var timeMidRoom = Math.Max(0f, Volatile.Read(ref spatial.RoomReverbTimeSeconds));
-            var hfRatio = Clamp01(Volatile.Read(ref spatial.RoomHfDecayRatio));
-            var roomTimeLow = timeMidRoom;
-            var roomTimeMid = timeMidRoom;
-            var roomTimeHigh = timeMidRoom * hfRatio;
+            var timeLow = reflections.ReverbTimes[0];
+            var timeMid = reflections.ReverbTimes[1];
+            var timeHigh = reflections.ReverbTimes[2];
+            var eqLow = reflections.Eq[0];
+            var eqMid = reflections.Eq[1];
+            var eqHigh = reflections.Eq[2];
+            var delay = reflections.Delay;
 
-            var roomEqHigh = Clamp01(Volatile.Read(ref spatial.RoomEarlyReflectionsGain));
-            var roomEqLow = Clamp01(Volatile.Read(ref spatial.RoomLateReverbGain));
-            var roomEqMid = Clamp01((roomEqLow + roomEqHigh) * 0.5f);
-            var diffusion = Clamp01(Volatile.Read(ref spatial.RoomDiffusion));
-            roomEqLow = Lerp(roomEqLow, roomEqMid, diffusion);
-            roomEqHigh = Lerp(roomEqHigh, roomEqMid, diffusion);
-            var roomDelay = 0;
-            handle.ApplyReflectionSimulation(roomTimeLow, roomTimeMid, roomTimeHigh, roomEqLow, roomEqMid, roomEqHigh, roomDelay);
+            if (hasRoom)
+            {
+                var roomTimeScale = Volatile.Read(ref spatial.RoomReverbTimeSeconds);
+                if (roomTimeScale > 0f)
+                {
+                    timeLow *= roomTimeScale;
+                    timeMid *= roomTimeScale;
+                    timeHigh *= roomTimeScale;
+                }
+
+                var hfRatio = Clamp01(Volatile.Read(ref spatial.RoomHfDecayRatio));
+                if (timeMid > 0f)
+                {
+                    timeHigh = timeMid * hfRatio;
+                }
+                else
+                {
+                    timeHigh *= hfRatio;
+                }
+
+                var earlyGain = Clamp01(Volatile.Read(ref spatial.RoomEarlyReflectionsGain));
+                var lateGain = Clamp01(Volatile.Read(ref spatial.RoomLateReverbGain));
+                eqHigh *= earlyGain;
+                eqLow *= lateGain;
+                eqMid *= Clamp01((earlyGain + lateGain) * 0.5f);
+
+                var diffusion = Clamp01(Volatile.Read(ref spatial.RoomDiffusion));
+                eqLow = Lerp(eqLow, eqMid, diffusion);
+                eqHigh = Lerp(eqHigh, eqMid, diffusion);
+            }
+
+            handle.ApplyReflectionSimulation(timeLow, timeMid, timeHigh, eqLow, eqMid, eqHigh, delay);
         }
 
         private static float Clamp01(float value)
