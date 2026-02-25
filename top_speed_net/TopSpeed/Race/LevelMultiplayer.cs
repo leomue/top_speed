@@ -62,6 +62,7 @@ namespace TopSpeed.Race
         private readonly AudioSourceHandle?[] _soundPosition;
         private readonly AudioSourceHandle?[] _soundPlayerNr;
         private readonly AudioSourceHandle?[] _soundFinished;
+        private readonly bool[] _disconnectedPlayerSlots;
 
         private AudioSourceHandle? _soundYouAre;
         private AudioSourceHandle? _soundPlayer;
@@ -109,6 +110,7 @@ namespace TopSpeed.Race
             _soundPosition = new AudioSourceHandle?[MaxPlayers];
             _soundPlayerNr = new AudioSourceHandle?[MaxPlayers];
             _soundFinished = new AudioSourceHandle?[MaxPlayers];
+            _disconnectedPlayerSlots = new bool[MaxPlayers];
             _currentState = PlayerState.NotReady;
         }
 
@@ -131,6 +133,7 @@ namespace TopSpeed.Race
             _snapshotFrames.Clear();
             _snapshotTickNow = 0f;
             _hasSnapshotTickNow = false;
+            Array.Clear(_disconnectedPlayerSlots, 0, _disconnectedPlayerSlots.Length);
 
             var rowSpacing = Math.Max(10.0f, _car.LengthM * 1.5f);
             var positionX = CalculateStartX(_playerNumber, _car.WidthM);
@@ -468,6 +471,8 @@ namespace TopSpeed.Race
         {
             if (media.PlayerNumber == _playerNumber)
                 return;
+            if (media.PlayerNumber < _disconnectedPlayerSlots.Length && _disconnectedPlayerSlots[media.PlayerNumber])
+                return;
             if (media.TotalBytes == 0 || media.TotalBytes > ProtocolConstants.MaxMediaBytes)
                 return;
 
@@ -484,6 +489,8 @@ namespace TopSpeed.Race
         public void ApplyRemoteMediaChunk(PacketPlayerMediaChunk media)
         {
             if (media.PlayerNumber == _playerNumber)
+                return;
+            if (media.PlayerNumber < _disconnectedPlayerSlots.Length && _disconnectedPlayerSlots[media.PlayerNumber])
                 return;
             if (!_remoteMediaTransfers.TryGetValue(media.PlayerNumber, out var transfer))
                 return;
@@ -510,6 +517,8 @@ namespace TopSpeed.Race
         {
             if (media.PlayerNumber == _playerNumber)
                 return;
+            if (media.PlayerNumber < _disconnectedPlayerSlots.Length && _disconnectedPlayerSlots[media.PlayerNumber])
+                return;
             if (!_remoteMediaTransfers.TryGetValue(media.PlayerNumber, out var transfer))
                 return;
             if (transfer.MediaId != media.MediaId)
@@ -534,6 +543,8 @@ namespace TopSpeed.Race
         {
             if (crashed.PlayerNumber == _playerNumber)
                 return;
+            if (crashed.PlayerNumber < _disconnectedPlayerSlots.Length && _disconnectedPlayerSlots[crashed.PlayerNumber])
+                return;
             if (_remotePlayers.TryGetValue(crashed.PlayerNumber, out var remote))
                 remote.Player.Crash(remote.Player.PositionX, scheduleRestart: false);
         }
@@ -541,6 +552,8 @@ namespace TopSpeed.Race
         public void ApplyRemoteFinish(PacketPlayer finished)
         {
             if (finished.PlayerNumber == _playerNumber)
+                return;
+            if (finished.PlayerNumber < _disconnectedPlayerSlots.Length && _disconnectedPlayerSlots[finished.PlayerNumber])
                 return;
             if (!_remotePlayers.TryGetValue(finished.PlayerNumber, out var remote))
                 return;
@@ -560,6 +573,9 @@ namespace TopSpeed.Race
 
         public void RemoveRemotePlayer(byte playerNumber)
         {
+            if (playerNumber < _disconnectedPlayerSlots.Length)
+                _disconnectedPlayerSlots[playerNumber] = true;
+
             _remoteMediaTransfers.Remove(playerNumber);
             if (_remotePlayers.TryGetValue(playerNumber, out var remote))
             {
@@ -567,6 +583,9 @@ namespace TopSpeed.Race
                 remote.Player.Dispose();
                 _remotePlayers.Remove(playerNumber);
             }
+
+            // Drop buffered snapshots containing the departed player to avoid stale remote recreation/audio.
+            RemovePlayerFromSnapshotFrames(playerNumber);
         }
 
         public void HandleServerRaceStopped(PacketRaceResults _)
@@ -628,6 +647,8 @@ namespace TopSpeed.Race
             uint mediaId)
         {
             if (playerNumber == _playerNumber)
+                return;
+            if (playerNumber < _disconnectedPlayerSlots.Length && _disconnectedPlayerSlots[playerNumber])
                 return;
 
             var remote = GetOrCreateRemotePlayer(playerNumber, car, positionX, positionY);
@@ -732,6 +753,33 @@ namespace TopSpeed.Race
             }
 
             return result;
+        }
+
+        private void RemovePlayerFromSnapshotFrames(byte playerNumber)
+        {
+            if (_snapshotFrames.Count == 0)
+                return;
+
+            for (var i = 0; i < _snapshotFrames.Count; i++)
+            {
+                var frame = _snapshotFrames[i];
+                var players = frame.Players ?? Array.Empty<PacketPlayerData>();
+                if (players.Length == 0)
+                    continue;
+
+                var filtered = new List<PacketPlayerData>(players.Length);
+                for (var j = 0; j < players.Length; j++)
+                {
+                    var data = players[j];
+                    if (data == null)
+                        continue;
+                    if (data.PlayerNumber == playerNumber)
+                        continue;
+                    filtered.Add(data);
+                }
+
+                frame.Players = filtered.ToArray();
+            }
         }
 
         private void ApplyBufferedRaceSnapshots(float elapsed)

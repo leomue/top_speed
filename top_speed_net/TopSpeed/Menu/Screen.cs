@@ -23,6 +23,7 @@ namespace TopSpeed.Menu
         private const int NoSelection = -1;
         private readonly List<MenuItem> _items;
         private readonly List<MenuShortcut> _shortcuts;
+        private readonly List<MenuShortcut> _sharedShortcuts;
         private readonly AudioManager _audio;
         private readonly SpeechService _speech;
         private readonly Func<bool> _usageHintsEnabled;
@@ -91,6 +92,7 @@ namespace TopSpeed.Menu
             _usageHintsEnabled = usageHintsEnabled ?? (() => false);
             _items = new List<MenuItem>(items);
             _shortcuts = new List<MenuShortcut>();
+            _sharedShortcuts = new List<MenuShortcut>();
             _defaultMenuSoundRoot = Path.Combine(AssetPaths.SoundsRoot, "En", "Menu");
             _legacySoundRoot = Path.Combine(AssetPaths.SoundsRoot, "Legacy");
             _musicRoot = Path.Combine(AssetPaths.SoundsRoot, "En", "Music");
@@ -108,6 +110,15 @@ namespace TopSpeed.Menu
                 return;
 
             _shortcuts.AddRange(shortcuts);
+        }
+
+        public void SetSharedShortcuts(IEnumerable<MenuShortcut>? shortcuts)
+        {
+            _sharedShortcuts.Clear();
+            if (shortcuts == null)
+                return;
+
+            _sharedShortcuts.AddRange(shortcuts);
         }
 
         public void Initialize()
@@ -382,11 +393,19 @@ namespace TopSpeed.Menu
 
         private bool TryHandleShortcut(InputManager input)
         {
-            if (_shortcuts.Count == 0)
+            if (TryHandleShortcutList(_shortcuts, input))
+                return true;
+            return TryHandleShortcutList(_sharedShortcuts, input);
+        }
+
+        private bool TryHandleShortcutList(IReadOnlyList<MenuShortcut> shortcuts, InputManager input)
+        {
+            if (shortcuts == null || shortcuts.Count == 0)
                 return false;
 
-            foreach (var shortcut in _shortcuts)
+            for (var i = 0; i < shortcuts.Count; i++)
             {
+                var shortcut = shortcuts[i];
                 if (shortcut == null)
                     continue;
                 if (!input.WasPressed(shortcut.Key))

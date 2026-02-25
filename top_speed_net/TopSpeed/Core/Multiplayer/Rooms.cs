@@ -12,13 +12,31 @@ namespace TopSpeed.Core.Multiplayer
     internal sealed partial class MultiplayerCoordinator
     {
         public bool IsInRoom => _roomState.InRoom;
+        private const string MultiplayerPingShortcutActionId = "multiplayer_ping";
+        private static readonly string[] MultiplayerPingShortcutMenus =
+        {
+            MultiplayerLobbyMenuId,
+            MultiplayerRoomBrowserMenuId,
+            MultiplayerCreateRoomMenuId,
+            MultiplayerRoomControlsMenuId,
+            MultiplayerRoomPlayersMenuId,
+            MultiplayerRoomOptionsMenuId,
+            MultiplayerLoadoutVehicleMenuId,
+            MultiplayerLoadoutTransmissionMenuId
+        };
 
         public void ConfigureMenuCloseHandlers()
         {
-            _menu.SetShortcuts(MultiplayerLobbyMenuId, new[]
+            _menu.RegisterSharedShortcutAction(
+                MultiplayerPingShortcutActionId,
+                new MenuShortcut(SharpDX.DirectInput.Key.F1, CheckCurrentPing));
+
+            for (var i = 0; i < MultiplayerPingShortcutMenus.Length; i++)
             {
-                new MenuShortcut(SharpDX.DirectInput.Key.F1, CheckCurrentPing)
-            });
+                _menu.SetSharedShortcutActions(
+                    MultiplayerPingShortcutMenus[i],
+                    new[] { MultiplayerPingShortcutActionId });
+            }
 
             _menu.SetCloseHandler(MultiplayerLobbyMenuId, _ =>
             {
