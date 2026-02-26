@@ -1,5 +1,6 @@
 using System;
 using TopSpeed.Data;
+using TopSpeed.Vehicles;
 
 namespace TopSpeed.Bots
 {
@@ -61,7 +62,8 @@ namespace TopSpeed.Bots
             float maxSteerDeg,
             float steering,
             int gears,
-            float[]? gearRatios = null)
+            float[]? gearRatios = null,
+            TransmissionPolicy? transmissionPolicy = null)
         {
             SurfaceTractionFactor = Math.Max(0.01f, surfaceTractionFactor);
             Deceleration = Math.Max(0.01f, deceleration);
@@ -92,6 +94,7 @@ namespace TopSpeed.Bots
             Steering = steering;
             Gears = Math.Max(1, gears);
             GearRatios = BuildRatios(Gears, gearRatios);
+            TransmissionPolicy = transmissionPolicy ?? TransmissionPolicy.Default;
         }
 
         public float SurfaceTractionFactor { get; }
@@ -123,6 +126,7 @@ namespace TopSpeed.Bots
         public float Steering { get; }
         public int Gears { get; }
         public float[] GearRatios { get; }
+        public TransmissionPolicy TransmissionPolicy { get; }
 
         public float GetGearRatio(int gear)
         {
@@ -153,9 +157,6 @@ namespace TopSpeed.Bots
     {
         private const float BaseLateralSpeed = 7.0f;
         private const float StabilitySpeedRef = 45.0f;
-        private const float AutoShiftHysteresis = 0.05f;
-        private const float AutoShiftCooldownSeconds = 0.15f;
-
         public static void Step(BotPhysicsConfig config, ref BotPhysicsState state, in BotPhysicsInput input)
         {
             if (config == null)
@@ -306,49 +307,32 @@ namespace TopSpeed.Bots
             }
 
             var currentAccel = ComputeNetAccelForGear(config, state.Gear, speedMps, throttle, surfaceTractionMod, longitudinalGripFactor);
-            var bestGear = state.Gear;
-            var bestAccel = currentAccel;
-
-            if (state.Gear < config.Gears)
-            {
-                var upAccel = ComputeNetAccelForGear(config, state.Gear + 1, speedMps, throttle, surfaceTractionMod, longitudinalGripFactor);
-                if (upAccel > bestAccel)
-                {
-                    bestAccel = upAccel;
-                    bestGear = state.Gear + 1;
-                }
-            }
-
-            if (state.Gear > 1)
-            {
-                var downAccel = ComputeNetAccelForGear(config, state.Gear - 1, speedMps, throttle, surfaceTractionMod, longitudinalGripFactor);
-                if (downAccel > bestAccel)
-                {
-                    bestAccel = downAccel;
-                    bestGear = state.Gear - 1;
-                }
-            }
-
             var currentRpm = SpeedToRpm(config, speedMps, state.Gear);
-            if (state.Gear < config.Gears && currentRpm >= config.RevLimiter * 0.995f)
-            {
-                state.Gear += 1;
-                state.AutoShiftCooldownSeconds = AutoShiftCooldownSeconds;
-                return;
-            }
+            var upAccel = state.Gear < config.Gears
+                ? ComputeNetAccelForGear(config, state.Gear + 1, speedMps, throttle, surfaceTractionMod, longitudinalGripFactor)
+                : float.NegativeInfinity;
+            var downAccel = state.Gear > 1
+                ? ComputeNetAccelForGear(config, state.Gear - 1, speedMps, throttle, surfaceTractionMod, longitudinalGripFactor)
+                : float.NegativeInfinity;
 
-            var shiftRpm = config.IdleRpm + (config.RevLimiter - config.IdleRpm) * 0.35f;
-            if (state.Gear > 1 && currentRpm < shiftRpm)
-            {
-                state.Gear -= 1;
-                state.AutoShiftCooldownSeconds = AutoShiftCooldownSeconds;
-                return;
-            }
+            var decision = AutomaticTransmissionLogic.Decide(
+                new AutomaticShiftInput(
+                    state.Gear,
+                    config.Gears,
+                    speedMps,
+                    config.TopSpeedKph / 3.6f,
+                    config.IdleRpm,
+                    config.RevLimiter,
+                    currentRpm,
+                    currentAccel,
+                    upAccel,
+                    downAccel),
+                config.TransmissionPolicy);
 
-            if (bestGear != state.Gear && bestAccel > currentAccel * (1f + AutoShiftHysteresis))
+            if (decision.Changed)
             {
-                state.Gear = bestGear;
-                state.AutoShiftCooldownSeconds = AutoShiftCooldownSeconds;
+                state.Gear = decision.NewGear;
+                state.AutoShiftCooldownSeconds = decision.CooldownSeconds;
             }
         }
 

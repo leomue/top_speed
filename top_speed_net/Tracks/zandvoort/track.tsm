@@ -8,23 +8,14 @@ ambience = noambience
 room_preset = outdoor_open
 reverb_gain = 0.1
 
-[sound: crowd_loop]
-type = ambient
-path = sounds/crowd.wav
-loop = true
-volume = 0.5
-spatial = true
-allow_hrtf = true
-
 [segment: seg1]
 type = 0
 surface = 0
 noise = 0
-length = 700
+length = 70000
 width = 10
 height = 0
 room = outdoor_default
-sound_sources = crowd_loop
 
 [segment: seg2]
 type = 7

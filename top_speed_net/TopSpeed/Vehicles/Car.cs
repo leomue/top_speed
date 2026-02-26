@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using TopSpeed.Audio;
+using TopSpeed.Bots;
 using TopSpeed.Common;
 using TopSpeed.Core;
 using TopSpeed.Data;
@@ -20,8 +21,6 @@ namespace TopSpeed.Vehicles
         private const float StabilitySpeedRef = 45.0f;
         private const float CrashVibrationSeconds = 1.5f;
         private const float BumpVibrationSeconds = 0.2f;
-        private const float AutoShiftHysteresis = 0.05f;
-        private const float AutoShiftCooldownSeconds = 0.15f;
         private const int ReverseGear = 0;
         private const int FirstForwardGear = 1;
         private const float ReverseShiftMaxSpeedKmh = 15.0f;
@@ -137,6 +136,7 @@ namespace TopSpeed.Vehicles
         private readonly IVibrationDevice? _vibration;
 
         private EngineModel _engine;
+        private TransmissionPolicy _transmissionPolicy;
 
         public Car(
             AudioManager audio,
@@ -251,6 +251,7 @@ namespace TopSpeed.Vehicles
                 definition.TireCircumferenceM,
                 definition.Gears,
                 definition.GearRatios);
+            _transmissionPolicy = definition.TransmissionPolicy ?? TransmissionPolicy.Default;
 
             _soundEngine = CreateRequiredSound(definition.GetSoundPath(VehicleAction.Engine), looped: true, allowHrtf: true);
             _soundStart = CreateRequiredSound(definition.GetSoundPath(VehicleAction.Start));
@@ -1577,55 +1578,42 @@ namespace TopSpeed.Vehicles
             }
 
             var currentAccel = ComputeNetAccelForGear(_gear, speedMps, throttle, surfaceTractionMod, longitudinalGripFactor);
-            var bestGear = _gear;
-            var bestAccel = currentAccel;
-
-            if (_gear < _gears)
-            {
-                var upAccel = ComputeNetAccelForGear(_gear + 1, speedMps, throttle, surfaceTractionMod, longitudinalGripFactor);
-                if (upAccel > bestAccel)
-                {
-                    bestAccel = upAccel;
-                    bestGear = _gear + 1;
-                }
-            }
-
-            if (_gear > 1)
-            {
-                var downAccel = ComputeNetAccelForGear(_gear - 1, speedMps, throttle, surfaceTractionMod, longitudinalGripFactor);
-                if (downAccel > bestAccel)
-                {
-                    bestAccel = downAccel;
-                    bestGear = _gear - 1;
-                }
-            }
-
             var currentRpm = SpeedToRpm(speedMps, _gear);
-            if (_gear < _gears && currentRpm >= _revLimiter * 0.995f)
-            {
-                ShiftAutomaticGear(_gear + 1);
-                return;
-            }
+            var upAccel = _gear < _gears
+                ? ComputeNetAccelForGear(_gear + 1, speedMps, throttle, surfaceTractionMod, longitudinalGripFactor)
+                : float.NegativeInfinity;
+            var downAccel = _gear > 1
+                ? ComputeNetAccelForGear(_gear - 1, speedMps, throttle, surfaceTractionMod, longitudinalGripFactor)
+                : float.NegativeInfinity;
 
-            var shiftRpm = _idleRpm + (_revLimiter - _idleRpm) * 0.35f;
-            if (_gear > 1 && currentRpm < shiftRpm)
-            {
-                ShiftAutomaticGear(_gear - 1);
-                return;
-            }
+            var decision = AutomaticTransmissionLogic.Decide(
+                new AutomaticShiftInput(
+                    _gear,
+                    _gears,
+                    speedMps,
+                    _topSpeed / 3.6f,
+                    _idleRpm,
+                    _revLimiter,
+                    currentRpm,
+                    currentAccel,
+                    upAccel,
+                    downAccel),
+                _transmissionPolicy);
 
-            if (bestGear != _gear && bestAccel > currentAccel * (1f + AutoShiftHysteresis))
-                ShiftAutomaticGear(bestGear);
+            if (decision.Changed)
+                ShiftAutomaticGear(decision.NewGear, decision.CooldownSeconds);
         }
 
-        private void ShiftAutomaticGear(int newGear)
+        private void ShiftAutomaticGear(int newGear, float cooldownSeconds)
         {
             if (newGear == _gear)
                 return;
-            _switchingGear = newGear > _gear ? 1 : -1;
+            var upshift = newGear > _gear;
+            _switchingGear = upshift ? 1 : -1;
             _gear = newGear;
-            PushEvent(CarEventType.InGear, 0.2f);
-            _autoShiftCooldown = AutoShiftCooldownSeconds;
+            var inGearDelay = upshift ? Math.Max(0.2f, cooldownSeconds) : 0.2f;
+            PushEvent(CarEventType.InGear, inGearDelay);
+            _autoShiftCooldown = Math.Max(0f, cooldownSeconds);
         }
 
         private float ComputeNetAccelForGear(int gear, float speedMps, float throttle, float surfaceTractionMod, float longitudinalGripFactor)

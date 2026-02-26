@@ -264,7 +264,8 @@ namespace TopSpeed.Vehicles
                 _maxSteerDeg,
                 _steering,
                 _gears,
-                definition.GearRatios);
+                definition.GearRatios,
+                definition.TransmissionPolicy);
 
             _soundEngine = CreateRequiredSound(definition.GetSoundPath(VehicleAction.Engine), "engine", looped: true);
             _soundStart = CreateRequiredSound(definition.GetSoundPath(VehicleAction.Start), "start");

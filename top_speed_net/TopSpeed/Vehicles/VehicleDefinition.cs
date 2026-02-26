@@ -69,6 +69,7 @@ namespace TopSpeed.Vehicles
         /// Affects how quickly the vehicle decelerates when braking.
         /// </summary>
         public float BrakeStrength { get; set; } = 1.0f;
+        public TransmissionPolicy TransmissionPolicy { get; set; } = TransmissionPolicy.Default;
 
         private readonly string?[] _sounds = new string?[8];
 

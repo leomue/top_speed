@@ -67,7 +67,8 @@ namespace TopSpeed.Vehicles
                 LengthM = parameters.LengthM,
                 PowerFactor = parameters.PowerFactor,
                 GearRatios = parameters.GearRatios,
-                BrakeStrength = parameters.BrakeStrength
+                BrakeStrength = parameters.BrakeStrength,
+                TransmissionPolicy = parameters.TransmissionPolicy
             };
 
             foreach (VehicleAction action in Enum.GetValues(typeof(VehicleAction)))
@@ -153,6 +154,8 @@ namespace TopSpeed.Vehicles
             if (tireCircumferenceM <= 0f)
                 tireCircumferenceM = 2.0f;
 
+            var transmissionPolicy = ReadTransmissionPolicy(settings, gears, idleRpm, revLimiter, autoShiftRpm);
+
             var def = new VehicleDefinition
             {
                 CarType = CarType.Vehicle1,
@@ -199,7 +202,8 @@ namespace TopSpeed.Vehicles
                 LengthM = lengthM,
                 PowerFactor = powerFactor,
                 GearRatios = gearRatios,
-                BrakeStrength = brakeStrength
+                BrakeStrength = brakeStrength,
+                TransmissionPolicy = transmissionPolicy
             };
 
             def.SetSoundPath(VehicleAction.Engine, ResolveSound(ReadString(settings, "engine_sound", "engine.wav"), builtinRoot, customVehiclesRoot, p => p.GetSoundPath(VehicleAction.Engine)));
@@ -307,6 +311,7 @@ namespace TopSpeed.Vehicles
             if (!File.Exists(filePath))
                 return result;
 
+            var section = string.Empty;
             foreach (var line in File.ReadLines(filePath))
             {
                 var trimmed = line.Trim();
@@ -314,14 +319,88 @@ namespace TopSpeed.Vehicles
                     continue;
                 if (trimmed.StartsWith(";") || trimmed.StartsWith("#"))
                     continue;
+                if (trimmed.StartsWith("[") && trimmed.EndsWith("]") && trimmed.Length > 2)
+                {
+                    section = trimmed.Substring(1, trimmed.Length - 2).Trim();
+                    continue;
+                }
                 var idx = trimmed.IndexOf('=');
                 if (idx <= 0)
                     continue;
                 var key = trimmed.Substring(0, idx).Trim();
                 var value = trimmed.Substring(idx + 1).Trim();
                 result[key] = value;
+                if (!string.IsNullOrWhiteSpace(section))
+                    result[$"{section}.{key}"] = value;
             }
             return result;
+        }
+
+        private static TransmissionPolicy ReadTransmissionPolicy(
+            Dictionary<string, string> values,
+            int gears,
+            float idleRpm,
+            float revLimiter,
+            float autoShiftRpm)
+        {
+            var resolvedGears = Math.Max(1, gears);
+            var intendedTopSpeedGear = ReadInt(values, "policy.top_speed_gear", resolvedGears);
+            var allowOverdrive = ReadBool(values, "policy.allow_overdrive_above_game_top_speed", false);
+
+            var baseCooldown = ReadFloat(values, "policy.base_auto_shift_cooldown", 0.15f);
+            var fallbackUpshiftDelay = ReadFloat(values, "policy.upshift_delay_default", baseCooldown);
+            var perGearUpshiftDelays = new float[resolvedGears];
+            for (var gear = 1; gear <= resolvedGears; gear++)
+            {
+                perGearUpshiftDelays[gear - 1] = fallbackUpshiftDelay;
+                if (gear >= resolvedGears)
+                    continue;
+
+                // Preferred explicit transition key: [policy] upshift_delay_5_6 = 0.24
+                var transitionKey = $"policy.upshift_delay_{gear}_{gear + 1}";
+                var sourceGearKey = $"policy.upshift_delay_g{gear}";
+                var overrideDelay = ReadFloat(values, transitionKey, float.NaN);
+                if (!float.IsNaN(overrideDelay))
+                {
+                    perGearUpshiftDelays[gear - 1] = overrideDelay;
+                    continue;
+                }
+
+                overrideDelay = ReadFloat(values, sourceGearKey, float.NaN);
+                if (!float.IsNaN(overrideDelay))
+                    perGearUpshiftDelays[gear - 1] = overrideDelay;
+            }
+
+            var defaultUpshiftFraction = 0.92f;
+            if (revLimiter > idleRpm && autoShiftRpm > 0f)
+                defaultUpshiftFraction = Math.Max(0.05f, Math.Min(1.0f, (autoShiftRpm - idleRpm) / (revLimiter - idleRpm)));
+
+            var upshiftRpmFraction = ReadFloat(values, "policy.auto_upshift_rpm_fraction", defaultUpshiftFraction);
+            var upshiftRpmAbsolute = ReadFloat(values, "policy.auto_upshift_rpm", 0f);
+            if (upshiftRpmAbsolute > 0f && revLimiter > idleRpm)
+                upshiftRpmFraction = (upshiftRpmAbsolute - idleRpm) / (revLimiter - idleRpm);
+
+            var downshiftRpmFraction = ReadFloat(values, "policy.auto_downshift_rpm_fraction", 0.35f);
+            var downshiftRpmAbsolute = ReadFloat(values, "policy.auto_downshift_rpm", 0f);
+            if (downshiftRpmAbsolute > 0f && revLimiter > idleRpm)
+                downshiftRpmFraction = (downshiftRpmAbsolute - idleRpm) / (revLimiter - idleRpm);
+
+            var topSpeedPursuitSpeedFraction = ReadFloat(values, "policy.top_speed_pursuit_speed_fraction", 0.97f);
+            var upshiftHysteresis = ReadFloat(values, "policy.upshift_hysteresis", 0.05f);
+            var minUpshiftNetAccel = ReadFloat(values, "policy.min_upshift_net_accel_mps2", -0.05f);
+            var preferIntendedGearNearLimit = ReadBool(values, "policy.prefer_intended_top_speed_gear_near_limit", true);
+
+            return new TransmissionPolicy(
+                intendedTopSpeedGear: intendedTopSpeedGear,
+                allowOverdriveAboveGameTopSpeed: allowOverdrive,
+                upshiftRpmFraction: upshiftRpmFraction,
+                downshiftRpmFraction: downshiftRpmFraction,
+                upshiftHysteresis: upshiftHysteresis,
+                baseAutoShiftCooldownSeconds: baseCooldown,
+                minUpshiftNetAccelerationMps2: minUpshiftNetAccel,
+                topSpeedPursuitSpeedFraction: topSpeedPursuitSpeedFraction,
+                preferIntendedTopSpeedGearNearLimit: preferIntendedGearNearLimit,
+                upshiftCooldownBySourceGear: perGearUpshiftDelays);
         }
 
         private static int ReadInt(Dictionary<string, string> values, string key, int defaultValue)
@@ -336,6 +415,34 @@ namespace TopSpeed.Vehicles
             if (values.TryGetValue(key, out var raw))
                 return raw;
             return defaultValue;
+        }
+
+        private static bool ReadBool(Dictionary<string, string> values, string key, bool defaultValue)
+        {
+            if (!values.TryGetValue(key, out var raw))
+                return defaultValue;
+
+            if (bool.TryParse(raw, out var boolValue))
+                return boolValue;
+
+            if (int.TryParse(raw, out var intValue))
+                return intValue != 0;
+
+            switch (raw.Trim().ToLowerInvariant())
+            {
+                case "yes":
+                case "y":
+                case "on":
+                case "true":
+                    return true;
+                case "no":
+                case "n":
+                case "off":
+                case "false":
+                    return false;
+                default:
+                    return defaultValue;
+            }
         }
 
         private static float ReadFloat(Dictionary<string, string> values, string key, float defaultValue)
