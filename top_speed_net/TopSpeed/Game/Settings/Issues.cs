@@ -1,49 +1,12 @@
 using System;
 using System.Collections.Generic;
-using TopSpeed.Audio;
-using TopSpeed.Data;
-using TopSpeed.Input;
-using TopSpeed.Menu;
 using TopSpeed.Core.Settings;
+using TopSpeed.Menu;
 
 namespace TopSpeed.Game
 {
     internal sealed partial class Game
     {
-        private void SaveSettings()
-        {
-            _settingsManager.Save(_settings);
-        }
-
-        private void RestoreDefaults()
-        {
-            _settings.RestoreDefaults();
-            _raceInput.SetDevice(_settings.DeviceMode);
-            _input.SetDeviceMode(_settings.DeviceMode);
-            _speech.ScreenReaderRateMs = _settings.ScreenReaderRateMs;
-            _needsCalibration = _settings.ScreenReaderRateMs <= 0f;
-            _menu.SetWrapNavigation(_settings.MenuWrapNavigation);
-            _menu.SetMenuSoundPreset(_settings.MenuSoundPreset);
-            _menu.SetMenuNavigatePanning(_settings.MenuNavigatePanning);
-            ApplyAudioSettings();
-            SaveSettings();
-            _speech.Speak("Defaults restored.");
-        }
-
-        private void SetDevice(InputDeviceMode mode)
-        {
-            _settings.DeviceMode = mode;
-            _raceInput.SetDevice(mode);
-            _input.SetDeviceMode(mode);
-            SaveSettings();
-        }
-
-        private void UpdateSetting(Action update)
-        {
-            update();
-            SaveSettings();
-        }
-
         private bool ShowSettingsIssuesDialog(Action? onClose = null)
         {
             if (_settingsIssues == null || _settingsIssues.Count == 0)
@@ -131,22 +94,6 @@ namespace TopSpeed.Game
                 default:
                     return "Info:";
             }
-        }
-
-        private void SaveMusicVolume(float volume)
-        {
-            _settings.MusicVolume = volume;
-            _settings.SyncAudioCategoriesFromMusicVolume();
-            ApplyAudioSettings();
-            SaveSettings();
-        }
-
-        private void ApplyAudioSettings()
-        {
-            _settings.AudioVolumes ??= new AudioVolumeSettings();
-            _settings.SyncMusicVolumeFromAudioCategories();
-            _audio.SetMasterVolume(_settings.GetCategoryScalar(AudioVolumeCategory.Master));
-            _menu.SetMenuMusicVolume(_settings.MusicVolume);
         }
     }
 }

@@ -20,11 +20,13 @@
   <ItemGroup>
     <ProjectReference Include="..\TS.Audio\TS.Audio.csproj" />
     <ProjectReference Include="..\TopSpeed.Shared\TopSpeed.Shared.csproj" />
+    <ProjectReference Include="..\Updater\Updater.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Remove="ThirdParty\Tolk\**\*.cs" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
     <Reference Include="System.Numerics" />
     <Reference Include="System.Speech" />
     <Reference Include="System.Windows.Forms" />
@@ -48,4 +50,10 @@
       <TargetPath>Sounds\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
     </Content>
   </ItemGroup>
+
+  <Target Name="CopyUpdater" AfterTargets="Build">
+    <MSBuild Projects="..\Updater\Updater.csproj" Targets="Build" Properties="Configuration=$(Configuration);Platform=$(Platform)" />
+    <Copy SourceFiles="..\Updater\bin\$(Configuration)\net472\Updater.exe" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="..\Updater\bin\$(Configuration)\net472\Updater.pdb" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('..\Updater\bin\$(Configuration)\net472\Updater.pdb')" />
+  </Target>
 </Project>

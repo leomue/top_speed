@@ -79,6 +79,7 @@ namespace TopSpeed.Input
         public bool MenuWrapNavigation { get; set; }
         public string MenuSoundPreset { get; set; } = "1";
         public bool MenuNavigatePanning { get; set; }
+        public bool AutoCheckUpdates { get; set; }
         public List<SavedServerEntry> SavedServers { get; set; } = new List<SavedServerEntry>();
 
         public bool UseJoystick
@@ -157,6 +158,7 @@ namespace TopSpeed.Input
             MenuWrapNavigation = true;
             MenuSoundPreset = "1";
             MenuNavigatePanning = false;
+            AutoCheckUpdates = true;
             SavedServers = new List<SavedServerEntry>();
         }
 

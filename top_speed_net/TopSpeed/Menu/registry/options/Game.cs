@@ -61,7 +61,13 @@ namespace TopSpeed.Menu
                     value => _settingsActions.UpdateSetting(() => _settings.MenuNavigatePanning = value),
                     onChanged: value => _menu.SetMenuNavigatePanning(value),
                     hint: "When checked, menu navigation sounds pan left or right based on the item position. Press ENTER to toggle."),
+                new CheckBox(
+                    "Check for updates on startup",
+                    () => _settings.AutoCheckUpdates,
+                    value => _settingsActions.UpdateSetting(() => _settings.AutoCheckUpdates = value),
+                    hint: "When checked, the game checks for updates automatically after the logo. Press ENTER to toggle."),
                 new MenuItem("Recalibrate screen reader rate", MenuAction.None, onActivate: _settingsActions.RecalibrateScreenReaderRate),
+                new MenuItem("Check for updates", MenuAction.None, onActivate: _settingsActions.CheckForUpdates),
                 BackItem()
             };
             return _menu.CreateMenu("options_game", items);

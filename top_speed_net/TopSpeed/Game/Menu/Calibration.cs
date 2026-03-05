@@ -1,75 +1,11 @@
 using System;
 using System.Diagnostics;
 using TopSpeed.Menu;
-using TopSpeed.Speech;
-using TopSpeed.Windowing;
-using TopSpeed.Core;
 
 namespace TopSpeed.Game
 {
     internal sealed partial class Game
     {
-        private void HandleMenuAction(MenuAction action)
-        {
-            switch (action)
-            {
-                case MenuAction.Exit:
-                    ExitRequested?.Invoke();
-                    break;
-                case MenuAction.QuickStart:
-                    PrepareQuickStart();
-                    QueueRaceStart(RaceMode.QuickStart);
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        private bool UpdateModalOperations()
-        {
-            return _multiplayerCoordinator.UpdatePendingOperations();
-        }
-
-        private void BeginPromptTextInput(
-            string prompt,
-            string? initialValue,
-            SpeechService.SpeakFlag speakFlag,
-            bool speakBeforeInput,
-            Action<TextInputResult> onCompleted)
-        {
-            if (onCompleted == null)
-                throw new ArgumentNullException(nameof(onCompleted));
-
-            if (_textInputPromptActive)
-            {
-                onCompleted(TextInputResult.CreateCancelled());
-                return;
-            }
-
-            if (speakBeforeInput)
-                _speech.Speak(prompt, speakFlag);
-
-            _textInputPromptActive = true;
-            _textInputPromptCallback = onCompleted;
-            _input.Suspend();
-            _window.ShowTextInput(initialValue);
-        }
-
-        private void UpdateTextInputPrompt()
-        {
-            if (!_textInputPromptActive)
-                return;
-
-            if (!_window.TryConsumeTextInput(out var result))
-                return;
-
-            var callback = _textInputPromptCallback;
-            _textInputPromptCallback = null;
-            _textInputPromptActive = false;
-            _input.Resume();
-            callback?.Invoke(result);
-        }
-
         private void StartCalibrationSequence(string? returnMenuId = null)
         {
             _calibrationReturnMenuId = returnMenuId;
@@ -139,11 +75,6 @@ namespace TopSpeed.Game
         private static bool IsCalibrationMenu(string? id)
         {
             return id == CalibrationIntroMenuId || id == CalibrationSampleMenuId;
-        }
-
-        private void EnterMenuState()
-        {
-            _state = AppState.Menu;
         }
     }
 }

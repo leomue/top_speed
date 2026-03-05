@@ -1,0 +1,142 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using TopSpeed.Core.Updates;
+using TopSpeed.Menu;
+
+namespace TopSpeed.Game
+{
+    internal sealed partial class Game
+    {
+        private void StartAutoUpdateCheck()
+        {
+            if (!_settings.AutoCheckUpdates)
+                return;
+            if (_updateCheckQueued || _updateCheckTask != null)
+                return;
+
+            _updateCheckQueued = true;
+            _updateCheckTask = Task.Run(() => _updateService.CheckAsync(UpdateConfig.CurrentVersion, CancellationToken.None));
+        }
+
+        private void StartManualUpdateCheck()
+        {
+            if (_updateCheckTask != null)
+            {
+                _speech.Speak("Update check is already in progress.");
+                return;
+            }
+
+            if (_updateDownloadTask != null)
+            {
+                _speech.Speak("An update download is already in progress.");
+                return;
+            }
+
+            _manualUpdateRequest = true;
+            _updatePromptShown = false;
+            _pendingUpdateInfo = null;
+            _updateCheckTask = Task.Run(() => _updateService.CheckAsync(UpdateConfig.CurrentVersion, CancellationToken.None));
+            _speech.Speak("Checking for updates.");
+        }
+
+        private void UpdateUpdateFlow()
+        {
+            HandleUpdateCheckCompletion();
+            HandleUpdatePrompt();
+            HandleUpdateDownload();
+        }
+
+        private void HandleUpdateCheckCompletion()
+        {
+            if (_updateCheckTask == null || !_updateCheckTask.IsCompleted)
+                return;
+
+            var wasManual = _manualUpdateRequest;
+            _manualUpdateRequest = false;
+
+            UpdateCheckResult result;
+            if (_updateCheckTask.IsFaulted || _updateCheckTask.IsCanceled)
+            {
+                result = new UpdateCheckResult
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Update check failed."
+                };
+            }
+            else
+            {
+                result = _updateCheckTask.GetAwaiter().GetResult();
+            }
+
+            _updateCheckTask = null;
+            if (!result.IsSuccess)
+            {
+                if (wasManual)
+                {
+                    ShowMessageDialog(
+                        "Update check failed",
+                        "The game could not check for updates.",
+                        new[] { result.ErrorMessage });
+                }
+
+                return;
+            }
+
+            _pendingUpdateInfo = result.Update;
+            if (_pendingUpdateInfo == null && wasManual)
+            {
+                ShowMessageDialog(
+                    "No updates found",
+                    "You are already using the latest version.",
+                    Array.Empty<string>());
+            }
+        }
+
+        private void HandleUpdatePrompt()
+        {
+            if (_pendingUpdateInfo == null || _updatePromptShown)
+                return;
+            if (_updateDownloadTask != null)
+                return;
+            if (_dialogs.IsDialogMenu(_menu.CurrentId)
+                || _multiplayerCoordinator.Questions.IsQuestionMenu(_menu.CurrentId)
+                || _choices.IsChoiceMenu(_menu.CurrentId)
+                || _textInputPromptActive
+                || _inputMapping.IsActive)
+                return;
+
+            var update = _pendingUpdateInfo;
+            _updatePromptShown = true;
+            var caption =
+                $"A new version of Top Speed was detected. Your current version is {UpdateConfig.CurrentVersion}. The new version is {update.VersionText}. Would you like to download the update?";
+            var changeItems = new List<DialogItem>();
+            if (update.Changes != null)
+            {
+                for (var i = 0; i < update.Changes.Count; i++)
+                {
+                    var line = update.Changes[i];
+                    if (string.IsNullOrWhiteSpace(line))
+                        continue;
+                    changeItems.Add(new DialogItem(line.Trim()));
+                }
+            }
+
+            var dialog = new Dialog(
+                "New version detected.",
+                caption,
+                QuestionId.Cancel,
+                changeItems,
+                onResult: resultId =>
+                {
+                    if (resultId == QuestionId.Confirm)
+                        BeginUpdateDownload(update);
+                },
+                new DialogButton(QuestionId.Confirm, "Download update"),
+                new DialogButton(QuestionId.Close, "Close"));
+
+            _dialogs.Show(dialog);
+        }
+    }
+}

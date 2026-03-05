@@ -1,0 +1,52 @@
+using SharpDX.DirectInput;
+
+namespace TopSpeed.Game
+{
+    internal sealed partial class Game
+    {
+        private void RunTimeTrial(float elapsed)
+        {
+            if (_timeTrial == null)
+            {
+                EndRace();
+                return;
+            }
+
+            _timeTrial.Run(elapsed);
+            if (_timeTrial.WantsPause)
+                EnterPause(AppState.TimeTrial);
+            if (_timeTrial.WantsExit || _input.WasPressed(Key.Escape))
+                EndRace();
+        }
+
+        private void RunSingleRace(float elapsed)
+        {
+            if (_singleRace == null)
+            {
+                EndRace();
+                return;
+            }
+
+            _singleRace.Run(elapsed);
+            if (_singleRace.WantsPause)
+                EnterPause(AppState.SingleRace);
+            if (_singleRace.WantsExit || _input.WasPressed(Key.Escape))
+                EndRace();
+        }
+
+        private void EndRace()
+        {
+            _timeTrial?.FinalizeLevelTimeTrial();
+            _timeTrial?.Dispose();
+            _timeTrial = null;
+
+            _singleRace?.FinalizeLevelSingleRace();
+            _singleRace?.Dispose();
+            _singleRace = null;
+
+            _state = AppState.Menu;
+            _menu.ShowRoot("main");
+            _menu.FadeInMenuMusic();
+        }
+    }
+}

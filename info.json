@@ -1,0 +1,13 @@
+{
+  "version": "2026.3.6",
+  "serverVersion": "2026.3.2",
+  "changes": [
+    "Release packaging now uses versioned zip names.",
+    "Updater integration checks this file to detect new versions.",
+    "General fixes and refactoring from the latest development cycle."
+  ],
+  "serverChanges": [
+    "Server package versioning is now independent from the game package.",
+    "Workflow now uses serverVersion for server artifact names."
+  ]
+}

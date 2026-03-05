@@ -7,6 +7,7 @@ namespace TopSpeed.Menu
     {
         void RestoreDefaults();
         void RecalibrateScreenReaderRate();
+        void CheckForUpdates();
         void SetDevice(InputDeviceMode mode);
         void UpdateSetting(Action update);
     }

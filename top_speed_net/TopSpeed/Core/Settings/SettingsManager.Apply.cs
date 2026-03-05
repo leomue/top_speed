@@ -229,6 +229,8 @@ namespace TopSpeed.Core.Settings
                 settings.MenuWrapNavigation = ui.MenuWrapNavigation.Value;
             if (ui.MenuNavigatePanning.HasValue)
                 settings.MenuNavigatePanning = ui.MenuNavigatePanning.Value;
+            if (ui.AutoCheckUpdates.HasValue)
+                settings.AutoCheckUpdates = ui.AutoCheckUpdates.Value;
 
             if (ui.MenuSoundPreset == null)
                 return;

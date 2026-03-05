@@ -240,7 +240,8 @@ namespace TopSpeed.Core.Settings
                     UsageHints = settings.UsageHints,
                     MenuWrapNavigation = settings.MenuWrapNavigation,
                     MenuSoundPreset = settings.MenuSoundPreset,
-                    MenuNavigatePanning = settings.MenuNavigatePanning
+                    MenuNavigatePanning = settings.MenuNavigatePanning,
+                    AutoCheckUpdates = settings.AutoCheckUpdates
                 },
                 Network = new SettingsNetworkDocument
                 {

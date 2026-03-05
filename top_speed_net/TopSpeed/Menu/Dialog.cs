@@ -87,7 +87,21 @@ namespace TopSpeed.Menu
             if (dialog == null)
                 throw new ArgumentNullException(nameof(dialog));
 
+            var updateInPlace = _activeDialog != null && IsDialogMenu(_menu.CurrentId);
             _activeDialog = dialog;
+            var items = BuildItems(dialog, out var defaultIndex);
+            _menu.UpdateItems(MenuId, items, preserveSelection: updateInPlace);
+            if (updateInPlace)
+                return;
+
+            var announcement = string.IsNullOrWhiteSpace(dialog.Caption)
+                ? $"{dialog.Title} dialog"
+                : $"{dialog.Title} dialog {dialog.Caption}";
+            _menu.Push(MenuId, announcement, defaultIndex);
+        }
+
+        private List<MenuItem> BuildItems(Dialog dialog, out int defaultIndex)
+        {
             var items = new List<MenuItem>
             {
                 new MenuItem(dialog.Title, MenuAction.None)
@@ -104,7 +118,7 @@ namespace TopSpeed.Menu
 
             var firstDialogItemIndex = string.IsNullOrWhiteSpace(dialog.Caption) ? 1 : 2;
             var firstButtonIndex = items.Count;
-            var defaultIndex = dialog.Items.Count > 0 ? firstDialogItemIndex : firstButtonIndex;
+            defaultIndex = dialog.Items.Count > 0 ? firstDialogItemIndex : firstButtonIndex;
             var firstDefaultFound = false;
             for (var i = 0; i < dialog.Buttons.Count; i++)
             {
@@ -121,13 +135,7 @@ namespace TopSpeed.Menu
 
             if (dialog.Buttons.Count == 0)
                 defaultIndex = 0;
-
-            _menu.UpdateItems(MenuId, items);
-
-            var announcement = string.IsNullOrWhiteSpace(dialog.Caption)
-                ? $"{dialog.Title} dialog"
-                : $"{dialog.Title} dialog {dialog.Caption}";
-            _menu.Push(MenuId, announcement, defaultIndex);
+            return items;
         }
 
         private bool HandleDialogClose(MenuCloseSource _)
