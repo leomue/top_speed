@@ -84,6 +84,7 @@ namespace TopSpeed.Menu
 
             _menu.Register(BuildOptionsMenu());
             _menu.Register(BuildOptionsGameSettingsMenu());
+            _menu.Register(BuildOptionsAudioSettingsMenu());
             _menu.Register(BuildOptionsVolumeSettingsMenu());
             _menu.Register(BuildOptionsControlsMenu());
             _menu.Register(BuildOptionsControlsDeviceMenu());
@@ -103,6 +104,7 @@ namespace TopSpeed.Menu
                 new MenuItem("Single race", MenuAction.None, nextMenuId: "single_race_type", onActivate: () => PrepareMode(RaceMode.SingleRace)),
                 new MenuItem("MultiPlayer game", MenuAction.None, nextMenuId: "multiplayer"),
                 new MenuItem("Options", MenuAction.None, nextMenuId: "options_main"),
+                new MenuItem("Check for updates", MenuAction.None, onActivate: _settingsActions.CheckForUpdates),
                 new MenuItem("Exit Game", MenuAction.Exit)
             }, "Main menu", titleProvider: MainMenuTitle);
 

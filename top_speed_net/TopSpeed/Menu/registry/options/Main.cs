@@ -9,6 +9,7 @@ namespace TopSpeed.Menu
             var items = new List<MenuItem>
             {
                 new MenuItem("Game settings", MenuAction.None, nextMenuId: "options_game"),
+                new MenuItem("Audio settings", MenuAction.None, nextMenuId: "options_audio"),
                 new MenuItem("Volume settings", MenuAction.None, nextMenuId: "options_volume",
                     onActivate: () =>
                     {
