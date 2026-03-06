@@ -30,6 +30,6 @@ namespace TopSpeed.Protocol
         public const ushort ServerMaxYear = 2026;
         public const byte ServerMaxMonth = 3;
         public const byte ServerMaxDay = 6;
-        public const byte ServerMaxRevision = 1;
+        public const byte ServerMaxRevision = 3;
     }
 }
