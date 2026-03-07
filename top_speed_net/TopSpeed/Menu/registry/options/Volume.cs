@@ -41,6 +41,16 @@ namespace TopSpeed.Menu
                     value => _settings.AudioVolumes.SurfaceLoopsPercent = value,
                     "Controls road and surface loops like asphalt, gravel, etc."),
                 BuildVolumeSlider(
+                    "Radio volume",
+                    () => _settings.AudioVolumes.RadioPercent,
+                    value => _settings.AudioVolumes.RadioPercent = value,
+                    "Controls radio playback volume from other players only. Your own radio playback is not affected."),
+                BuildVolumeSlider(
+                    "Ambients and sound sources",
+                    () => _settings.AudioVolumes.AmbientsAndSourcesPercent,
+                    value => _settings.AudioVolumes.AmbientsAndSourcesPercent = value,
+                    "Controls track ambients, weather loops, noise sounds, and custom track sound sources."),
+                BuildVolumeSlider(
                     "Music volume",
                     () => _settings.AudioVolumes.MusicPercent,
                     value =>

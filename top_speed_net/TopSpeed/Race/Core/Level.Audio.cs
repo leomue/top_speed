@@ -105,5 +105,11 @@ namespace TopSpeed.Race
                 return;
             _soundQueue.Enqueue(sound);
         }
+
+        private void RefreshCategoryVolumes()
+        {
+            var ambientPercent = _settings.AudioVolumes?.AmbientsAndSourcesPercent ?? 100;
+            _track.SetAmbientVolumePercent(ambientPercent);
+        }
     }
 }

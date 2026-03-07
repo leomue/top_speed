@@ -11,6 +11,7 @@ namespace TopSpeed.Race
 
         protected void BeginFrame(float raceStartDelaySeconds = DefaultRaceStartDelaySeconds)
         {
+            RefreshCategoryVolumes();
             EnsureStartSequenceScheduled(raceStartDelaySeconds);
             ProcessDueEvents();
         }

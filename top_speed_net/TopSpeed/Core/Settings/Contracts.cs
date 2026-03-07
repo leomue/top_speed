@@ -55,6 +55,12 @@ namespace TopSpeed.Core.Settings
         [DataMember(Name = "surfaceLoopsPercent")]
         public int? SurfaceLoopsPercent { get; set; }
 
+        [DataMember(Name = "radioPercent")]
+        public int? RadioPercent { get; set; }
+
+        [DataMember(Name = "ambientsAndSourcesPercent")]
+        public int? AmbientsAndSourcesPercent { get; set; }
+
         [DataMember(Name = "musicPercent")]
         public int? MusicPercent { get; set; }
 
@@ -136,6 +142,7 @@ namespace TopSpeed.Core.Settings
         [DataMember(Name = "pause")] public int? Pause { get; set; }
         [DataMember(Name = "throttleInvertMode")] public int? ThrottleInvertMode { get; set; }
         [DataMember(Name = "brakeInvertMode")] public int? BrakeInvertMode { get; set; }
+        [DataMember(Name = "steeringDeadZone")] public int? SteeringDeadZone { get; set; }
         [DataMember(Name = "center")] public SettingsJoystickCenterDocument? Center { get; set; }
     }
 

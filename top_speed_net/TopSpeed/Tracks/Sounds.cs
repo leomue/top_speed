@@ -56,7 +56,7 @@ namespace TopSpeed.Tracks
                 _segmentTrackSounds[pair.Key] = runtime;
                 _allTrackSounds.Add(runtime);
 
-                if (pair.Value.Global && runtime.EnsureCreated(refreshRandomVariant: false))
+                if (pair.Value.Global && runtime.EnsureCreated(refreshRandomVariant: false, _ambientVolumeScale))
                     runtime.Play();
             }
         }

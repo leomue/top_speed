@@ -10,6 +10,8 @@ namespace TopSpeed.Input
         OtherVehicleEngine,
         OtherVehicleEvents,
         SurfaceLoops,
+        Radio,
+        AmbientsAndSources,
         Music,
         OnlineServerEvents
     }
@@ -22,6 +24,8 @@ namespace TopSpeed.Input
         public int OtherVehicleEnginePercent { get; set; }
         public int OtherVehicleEventsPercent { get; set; }
         public int SurfaceLoopsPercent { get; set; }
+        public int RadioPercent { get; set; }
+        public int AmbientsAndSourcesPercent { get; set; }
         public int MusicPercent { get; set; }
         public int OnlineServerEventsPercent { get; set; }
 
@@ -33,6 +37,8 @@ namespace TopSpeed.Input
             OtherVehicleEnginePercent = 80;
             OtherVehicleEventsPercent = 100;
             SurfaceLoopsPercent = 70;
+            RadioPercent = 100;
+            AmbientsAndSourcesPercent = 100;
             MusicPercent = ClampPercent(defaultMusicPercent);
             OnlineServerEventsPercent = 100;
         }
@@ -45,6 +51,8 @@ namespace TopSpeed.Input
             OtherVehicleEnginePercent = ClampPercent(OtherVehicleEnginePercent);
             OtherVehicleEventsPercent = ClampPercent(OtherVehicleEventsPercent);
             SurfaceLoopsPercent = ClampPercent(SurfaceLoopsPercent);
+            RadioPercent = ClampPercent(RadioPercent);
+            AmbientsAndSourcesPercent = ClampPercent(AmbientsAndSourcesPercent);
             MusicPercent = ClampPercent(MusicPercent);
             OnlineServerEventsPercent = ClampPercent(OnlineServerEventsPercent);
         }
@@ -59,6 +67,8 @@ namespace TopSpeed.Input
                 AudioVolumeCategory.OtherVehicleEngine => OtherVehicleEnginePercent,
                 AudioVolumeCategory.OtherVehicleEvents => OtherVehicleEventsPercent,
                 AudioVolumeCategory.SurfaceLoops => SurfaceLoopsPercent,
+                AudioVolumeCategory.Radio => RadioPercent,
+                AudioVolumeCategory.AmbientsAndSources => AmbientsAndSourcesPercent,
                 AudioVolumeCategory.Music => MusicPercent,
                 AudioVolumeCategory.OnlineServerEvents => OnlineServerEventsPercent,
                 _ => 100

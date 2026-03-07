@@ -13,8 +13,8 @@ namespace TopSpeed.Input
             var joystickSteer = 0;
             if (UseJoystick)
             {
-                var left = GetAxis(_left);
-                var right = GetAxis(_right);
+                var left = ApplySteeringDeadZone(GetAxis(_left));
+                var right = ApplySteeringDeadZone(GetAxis(_right));
                 joystickSteer = left != 0 ? -left : right;
             }
 
@@ -63,5 +63,14 @@ namespace TopSpeed.Input
         public bool GetReverseRequested() => _allowDrivingInput && UseKeyboard && WasPressed(Key.Z);
 
         public bool GetForwardRequested() => _allowDrivingInput && UseKeyboard && WasPressed(Key.A);
+
+        private int ApplySteeringDeadZone(int value)
+        {
+            var deadZone = _settings.JoystickSteeringDeadZone;
+            if (deadZone < 1 || deadZone > 5)
+                deadZone = 1;
+
+            return Math.Abs(value) <= deadZone ? 0 : value;
+        }
     }
 }

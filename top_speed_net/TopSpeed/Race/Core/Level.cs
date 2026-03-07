@@ -167,6 +167,7 @@ namespace TopSpeed.Race
                 new RadioVehiclePanel(_input, _localRadio, NextLocalMediaId, SpeakText, HandleLocalRadioMediaLoaded, HandleLocalRadioPlaybackChanged)
             });
             ApplyActivePanelInputAccess();
+            RefreshCategoryVolumes();
 
             if (!string.IsNullOrWhiteSpace(track) &&
                 track.IndexOf("adv", StringComparison.OrdinalIgnoreCase) >= 0)

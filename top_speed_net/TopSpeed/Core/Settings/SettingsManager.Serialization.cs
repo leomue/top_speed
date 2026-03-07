@@ -155,6 +155,8 @@ namespace TopSpeed.Core.Settings
                     OtherVehicleEnginePercent = audio.OtherVehicleEnginePercent,
                     OtherVehicleEventsPercent = audio.OtherVehicleEventsPercent,
                     SurfaceLoopsPercent = audio.SurfaceLoopsPercent,
+                    RadioPercent = audio.RadioPercent,
+                    AmbientsAndSourcesPercent = audio.AmbientsAndSourcesPercent,
                     MusicPercent = audio.MusicPercent,
                     OnlineServerEventsPercent = audio.OnlineServerEventsPercent,
                     HrtfAudio = settings.HrtfAudio,
@@ -209,6 +211,7 @@ namespace TopSpeed.Core.Settings
                         Pause = (int)settings.JoystickPause,
                         ThrottleInvertMode = (int)settings.JoystickThrottleInvertMode,
                         BrakeInvertMode = (int)settings.JoystickBrakeInvertMode,
+                        SteeringDeadZone = settings.JoystickSteeringDeadZone,
                         Center = new SettingsJoystickCenterDocument
                         {
                             X = settings.JoystickCenter.X,

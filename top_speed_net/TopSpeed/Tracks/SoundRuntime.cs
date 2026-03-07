@@ -54,7 +54,7 @@ namespace TopSpeed.Tracks
                 ActiveDefinition = definition;
             }
 
-            public bool EnsureCreated(bool refreshRandomVariant)
+            public bool EnsureCreated(bool refreshRandomVariant, float categoryScale)
             {
                 var selection = SelectVariant(refreshRandomVariant);
                 if (!selection.HasValue)
@@ -75,7 +75,7 @@ namespace TopSpeed.Tracks
                 _handle = activeDefinition.Spatial
                     ? _audio.CreateSpatialSource(path, streamFromDisk: true, allowHrtf: activeDefinition.AllowHrtf)
                     : _audio.CreateSource(path, streamFromDisk: true, useHrtf: false);
-                ApplySourceSettings(_handle, activeDefinition);
+                ApplySourceSettings(_handle, activeDefinition, categoryScale);
 
                 if (previousHandle != null)
                     DisposePreviousHandle(previousHandle, refreshRandomVariant);
@@ -84,6 +84,16 @@ namespace TopSpeed.Tracks
                     _handle.SeekToStart();
 
                 return true;
+            }
+
+            public void ApplyCategoryVolume(float categoryScale)
+            {
+                if (_handle == null)
+                    return;
+
+                var scale = Clamp01(categoryScale);
+                var value = Clamp01(ActiveDefinition.Volume * scale);
+                _handle.SetVolume(value);
             }
 
             public void Play()
@@ -171,9 +181,10 @@ namespace TopSpeed.Tracks
                 return resolved;
             }
 
-            private static void ApplySourceSettings(AudioSourceHandle handle, TrackSoundSourceDefinition definition)
+            private static void ApplySourceSettings(AudioSourceHandle handle, TrackSoundSourceDefinition definition, float categoryScale)
             {
-                handle.SetVolume(definition.Volume);
+                var scale = Clamp01(categoryScale);
+                handle.SetVolume(Clamp01(definition.Volume * scale));
                 handle.SetPitch(definition.Pitch);
                 handle.SetPan(definition.Pan);
 
@@ -188,6 +199,15 @@ namespace TopSpeed.Tracks
                     var rolloff = definition.Rolloff ?? 1.0f;
                     handle.SetDistanceModel(DistanceModel.Inverse, minDistance, maxDistance, rolloff);
                 }
+            }
+
+            private static float Clamp01(float value)
+            {
+                if (value <= 0f)
+                    return 0f;
+                if (value >= 1f)
+                    return 1f;
+                return value;
             }
 
             private string? ResolveSoundPath(string path)

@@ -128,6 +128,7 @@ namespace TopSpeed.Vehicles
         private AudioSourceHandle? _soundBackfire;
         private int _lastOtherEngineVolumePercent = -1;
         private int _lastOtherEventsVolumePercent = -1;
+        private int _lastRadioVolumePercent = -1;
 
         private EngineModel _engine;
         private readonly BotPhysicsConfig _physicsConfig;

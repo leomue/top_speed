@@ -26,7 +26,7 @@ namespace TopSpeed.Tracks
                     runtime.Definition.RandomMode == TrackSoundRandomMode.PerArea &&
                     runtime.LastAreaIndex != segmentIndex;
 
-                if (!runtime.EnsureCreated(refreshRandom))
+                if (!runtime.EnsureCreated(refreshRandom, _ambientVolumeScale))
                     continue;
 
                 if (runtime.Handle != null)

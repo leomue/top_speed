@@ -53,10 +53,10 @@ namespace TopSpeed.Tracks
                 sound.Play(loop: false);
         }
 
-        private static void SetVolumePercent(AudioSourceHandle sound, int volume)
+        private void SetVolumePercent(AudioSourceHandle sound, int volume)
         {
             var clamped = Math.Max(0, Math.Min(100, volume));
-            sound.SetVolume(clamped / 100f);
+            sound.SetVolume((clamped / 100f) * _ambientVolumeScale);
         }
     }
 }

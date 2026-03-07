@@ -32,6 +32,7 @@ namespace TopSpeed.Input
         public JoystickAxisOrButton JoystickPause { get; set; }
         public PedalInvertMode JoystickThrottleInvertMode { get; set; }
         public PedalInvertMode JoystickBrakeInvertMode { get; set; }
+        public int JoystickSteeringDeadZone { get; set; }
         public JoystickStateSnapshot JoystickCenter { get; set; }
 
         public Key KeyLeft { get; set; }
@@ -111,6 +112,7 @@ namespace TopSpeed.Input
             JoystickPause = JoystickAxisOrButton.Button14;
             JoystickThrottleInvertMode = PedalInvertMode.Auto;
             JoystickBrakeInvertMode = PedalInvertMode.Auto;
+            JoystickSteeringDeadZone = 1;
             JoystickCenter = default;
 
             KeyLeft = Key.Left;

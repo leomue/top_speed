@@ -67,7 +67,25 @@ namespace TopSpeed.Menu
                     new[] { "Auto", "Normal", "Inverted" },
                     () => (int)_settings.JoystickBrakeInvertMode,
                     value => _settingsActions.UpdateSetting(() => _settings.JoystickBrakeInvertMode = (PedalInvertMode)value),
-                    hint: "Auto detects wheel pedal direction from resting position. Use LEFT or RIGHT to change.")
+                    hint: "Auto detects wheel pedal direction from resting position. Use LEFT or RIGHT to change."),
+                new RadioButton(
+                    "Steering dead zone",
+                    new[] { "Default (1 degree)", "2 degrees", "3 degrees", "4 degrees", "5 degrees" },
+                    () =>
+                    {
+                        var deadZone = _settings.JoystickSteeringDeadZone;
+                        if (deadZone < 1 || deadZone > 5)
+                            deadZone = 1;
+                        return deadZone - 1;
+                    },
+                    value =>
+                    {
+                        var deadZone = value + 1;
+                        if (deadZone < 1 || deadZone > 5)
+                            deadZone = 1;
+                        _settingsActions.UpdateSetting(() => _settings.JoystickSteeringDeadZone = deadZone);
+                    },
+                    hint: "Sets how much small steering movement is ignored around center. Default is 1 degree. Use LEFT or RIGHT to change.")
             };
 
             items.AddRange(BuildMappingItems(InputMappingMode.Joystick, includeBack: false));

@@ -83,6 +83,18 @@ namespace TopSpeed.Core.Settings
                 hasCategoryVolumes = true;
             }
 
+            if (audio.RadioPercent.HasValue)
+            {
+                settings.AudioVolumes.RadioPercent = ClampPercent(audio.RadioPercent.Value, "audio.radioPercent", issues);
+                hasCategoryVolumes = true;
+            }
+
+            if (audio.AmbientsAndSourcesPercent.HasValue)
+            {
+                settings.AudioVolumes.AmbientsAndSourcesPercent = ClampPercent(audio.AmbientsAndSourcesPercent.Value, "audio.ambientsAndSourcesPercent", issues);
+                hasCategoryVolumes = true;
+            }
+
             if (audio.MusicPercent.HasValue)
             {
                 settings.AudioVolumes.MusicPercent = ClampPercent(audio.MusicPercent.Value, "audio.musicPercent", issues);
@@ -187,6 +199,7 @@ namespace TopSpeed.Core.Settings
             settings.JoystickPause = ReadJoystick(joystick.Pause, settings.JoystickPause, "input.joystick.pause", issues);
             settings.JoystickThrottleInvertMode = ReadEnum(joystick.ThrottleInvertMode, settings.JoystickThrottleInvertMode, "input.joystick.throttleInvertMode", issues);
             settings.JoystickBrakeInvertMode = ReadEnum(joystick.BrakeInvertMode, settings.JoystickBrakeInvertMode, "input.joystick.brakeInvertMode", issues);
+            settings.JoystickSteeringDeadZone = ClampInt(joystick.SteeringDeadZone, settings.JoystickSteeringDeadZone, 1, 5, "input.joystick.steeringDeadZone", issues);
 
             if (joystick.Center == null)
                 return;

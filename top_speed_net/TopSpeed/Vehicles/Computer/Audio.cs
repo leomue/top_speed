@@ -58,11 +58,16 @@ namespace TopSpeed.Vehicles
         {
             var enginePercent = _settings.AudioVolumes?.OtherVehicleEnginePercent ?? 80;
             var eventsPercent = _settings.AudioVolumes?.OtherVehicleEventsPercent ?? 100;
-            if (!force && enginePercent == _lastOtherEngineVolumePercent && eventsPercent == _lastOtherEventsVolumePercent)
+            var radioPercent = _settings.AudioVolumes?.RadioPercent ?? 100;
+            if (!force &&
+                enginePercent == _lastOtherEngineVolumePercent &&
+                eventsPercent == _lastOtherEventsVolumePercent &&
+                radioPercent == _lastRadioVolumePercent)
                 return;
 
             _lastOtherEngineVolumePercent = enginePercent;
             _lastOtherEventsVolumePercent = eventsPercent;
+            _lastRadioVolumePercent = radioPercent;
 
             SetOtherEngineVolumePercent(_soundEngine, 80);
             SetOtherEngineVolumePercent(_soundStart, 100);
@@ -72,6 +77,7 @@ namespace TopSpeed.Vehicles
             SetOtherEventVolumePercent(_soundMiniCrash, 100);
             SetOtherEventVolumePercent(_soundBump, 100);
             SetOtherEventVolumePercent(_soundBackfire, 100);
+            _radio.SetVolumePercent(radioPercent);
         }
 
         private void SetOtherEngineVolumePercent(AudioSourceHandle? sound, int percent)

@@ -55,6 +55,8 @@ namespace TopSpeed.Tracks
         private float _noiseStartPos;
         private float _noiseEndPos;
         private bool _noisePlaying;
+        private int _ambientVolumePercent;
+        private float _ambientVolumeScale;
         private int _activeAudioSegmentIndex;
         private RoomAcoustics _activeRoomAcoustics;
 
@@ -96,6 +98,8 @@ namespace TopSpeed.Tracks
             _random = new Random();
             _sourceDirectory = ResolveSourceDirectory(data.SourcePath);
             _segmentStartDistances = new float[Math.Max(0, _segmentCount)];
+            _ambientVolumePercent = 100;
+            _ambientVolumeScale = 1f;
             _activeAudioSegmentIndex = -1;
             _activeRoomAcoustics = RoomAcoustics.Default;
 
