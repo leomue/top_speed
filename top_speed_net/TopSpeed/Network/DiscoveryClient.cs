@@ -103,7 +103,7 @@ namespace TopSpeed.Network
 
         private static string ReadFixedString(byte[] data, int offset, int length)
         {
-            var value = Encoding.ASCII.GetString(data, offset, length);
+            var value = Encoding.UTF8.GetString(data, offset, length);
             var nullIndex = value.IndexOf('\0');
             if (nullIndex >= 0)
                 value = value.Substring(0, nullIndex);

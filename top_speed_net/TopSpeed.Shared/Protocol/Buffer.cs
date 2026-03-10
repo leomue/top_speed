@@ -53,7 +53,7 @@ namespace TopSpeed.Protocol
 
         public string ReadFixedString(int length)
         {
-            var value = Encoding.ASCII.GetString(_data, _offset, length);
+            var value = Encoding.UTF8.GetString(_data, _offset, length);
             _offset += length;
             var nullIndex = value.IndexOf('\0');
             return nullIndex >= 0 ? value.Substring(0, nullIndex) : value.Trim();
@@ -105,9 +105,24 @@ namespace TopSpeed.Protocol
 
         public void WriteFixedString(string value, int length)
         {
-            var bytes = Encoding.ASCII.GetBytes(value ?? string.Empty);
+            if (length <= 0)
+                return;
+
+            var text = value ?? string.Empty;
+            var bytes = Encoding.UTF8.GetBytes(text);
             var count = Math.Min(length, bytes.Length);
-            Array.Copy(bytes, 0, _buffer, _offset, count);
+            if (count == bytes.Length)
+            {
+                Array.Copy(bytes, 0, _buffer, _offset, count);
+            }
+            else
+            {
+                var chars = text.ToCharArray();
+                var encoder = Encoding.UTF8.GetEncoder();
+                encoder.Convert(chars, 0, chars.Length, _buffer, _offset, length, true, out _, out var bytesUsed, out _);
+                count = bytesUsed;
+            }
+
             for (var i = count; i < length; i++)
                 _buffer[_offset + i] = 0;
             _offset += length;

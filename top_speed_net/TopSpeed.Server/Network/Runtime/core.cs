@@ -73,6 +73,8 @@ namespace TopSpeed.Server.Network
 
                 RemoveConnection(player, notifyRoom: true, sendDisconnectPacket: true, reason: "timeout");
             }
+
+            CleanupLiveStreams();
         }
 
         private void OnPeerDisconnected(IPEndPoint endpoint)

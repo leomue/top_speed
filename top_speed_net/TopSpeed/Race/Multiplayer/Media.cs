@@ -62,6 +62,8 @@ namespace TopSpeed.Race
                 return;
             if (!transfer.IsComplete)
                 return;
+            if (_remoteLiveStates.TryGetValue(media.PlayerNumber, out var live) && live.StreamId != 0)
+                return;
             if (!_remotePlayers.TryGetValue(media.PlayerNumber, out var remote))
                 return;
 

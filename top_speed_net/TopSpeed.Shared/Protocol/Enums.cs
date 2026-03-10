@@ -37,6 +37,12 @@ namespace TopSpeed.Protocol
         Backfire = 6
     }
 
+    public enum LiveCodec : byte
+    {
+        None = 0,
+        Opus = 1
+    }
+
     public enum Command : byte
     {
         Disconnect = 0,
@@ -84,7 +90,10 @@ namespace TopSpeed.Protocol
         RoomGetRequest = 42,
         RoomGet = 43,
         ProtocolHello = 44,
-        ProtocolWelcome = 45
+        ProtocolWelcome = 45,
+        PlayerLiveStart = 46,
+        PlayerLiveFrame = 47,
+        PlayerLiveStop = 48
     }
 
     public enum ProtocolMessageCode : byte

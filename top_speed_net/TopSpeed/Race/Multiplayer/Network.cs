@@ -66,8 +66,10 @@ namespace TopSpeed.Race
                 _disconnectedPlayerSlots[playerNumber] = true;
 
             _remoteMediaTransfers.Remove(playerNumber);
+            _remoteLiveStates.Remove(playerNumber);
             if (_remotePlayers.TryGetValue(playerNumber, out var remote))
             {
+                remote.Player.StopLiveStream();
                 remote.Player.FinalizePlayer();
                 remote.Player.Dispose();
                 _remotePlayers.Remove(playerNumber);
@@ -84,6 +86,9 @@ namespace TopSpeed.Race
             _serverStopReceived = true;
             _snapshotFrames.Clear();
             _hasSnapshotTickNow = false;
+            foreach (var remote in _remotePlayers.Values)
+                remote.Player.StopLiveStream();
+            _remoteLiveStates.Clear();
             if (!_sentFinish)
             {
                 _sentFinish = true;
@@ -109,6 +114,8 @@ namespace TopSpeed.Race
 
         private void TryApplyPendingRemoteMedia(byte playerNumber, RemotePlayer remote)
         {
+            if (_remoteLiveStates.TryGetValue(playerNumber, out var live) && live.StreamId != 0)
+                return;
             if (!_remoteMediaTransfers.TryGetValue(playerNumber, out var transfer))
                 return;
             if (!transfer.IsComplete)

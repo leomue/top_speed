@@ -36,6 +36,7 @@ namespace TopSpeed.Game
             RegisterMultiplayerRaceStatePacketHandlers();
             RegisterMultiplayerRaceEventPacketHandlers();
             RegisterMultiplayerMediaPacketHandlers();
+            RegisterMultiplayerLivePacketHandlers();
             RegisterMultiplayerChatPacketHandlers();
         }
     }

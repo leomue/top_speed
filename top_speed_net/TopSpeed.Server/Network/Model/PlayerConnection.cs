@@ -43,6 +43,7 @@ namespace TopSpeed.Server.Network
         public bool MediaPlaying { get; set; }
         public uint MediaId { get; set; }
         public InMedia? IncomingMedia { get; set; }
+        public LiveState? Live { get; set; }
         public DateTime LastSeenUtc { get; set; }
         public float WidthM { get; set; }
         public float LengthM { get; set; }

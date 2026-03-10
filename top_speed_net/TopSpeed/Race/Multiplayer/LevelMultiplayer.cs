@@ -5,6 +5,7 @@ using TopSpeed.Common;
 using TopSpeed.Data;
 using TopSpeed.Input;
 using TopSpeed.Network;
+using TopSpeed.Network.Live;
 using TopSpeed.Protocol;
 using TopSpeed.Race.Events;
 using TopSpeed.Race.Multiplayer;
@@ -29,11 +30,14 @@ namespace TopSpeed.Race
         private readonly byte _playerNumber;
         private readonly Dictionary<byte, RemotePlayer> _remotePlayers;
         private readonly Dictionary<byte, MediaTransfer> _remoteMediaTransfers;
+        private readonly Dictionary<byte, Multiplayer.LiveState> _remoteLiveStates;
+        private readonly List<byte> _expiredLivePlayers;
         private readonly List<SnapshotFrame> _snapshotFrames;
         private readonly AudioSourceHandle?[] _soundPosition;
         private readonly AudioSourceHandle?[] _soundPlayerNr;
         private readonly AudioSourceHandle?[] _soundFinished;
         private readonly bool[] _disconnectedPlayerSlots;
+        private readonly Tx _liveTx;
 
         private AudioSourceHandle? _soundYouAre;
         private AudioSourceHandle? _soundPlayer;
@@ -55,6 +59,7 @@ namespace TopSpeed.Race
         private float _snapshotTickNow;
         private bool _hasSnapshotTickNow;
         private bool _sendFailureAnnounced;
+        private bool _liveFailureAnnounced;
 
         public LevelMultiplayer(
             AudioManager audio,
@@ -78,11 +83,14 @@ namespace TopSpeed.Race
             _playerNumber = playerNumber;
             _remotePlayers = new Dictionary<byte, RemotePlayer>();
             _remoteMediaTransfers = new Dictionary<byte, MediaTransfer>();
+            _remoteLiveStates = new Dictionary<byte, Multiplayer.LiveState>();
+            _expiredLivePlayers = new List<byte>();
             _snapshotFrames = new List<SnapshotFrame>(SnapshotBufferMax);
             _soundPosition = new AudioSourceHandle?[MaxPlayers];
             _soundPlayerNr = new AudioSourceHandle?[MaxPlayers];
             _soundFinished = new AudioSourceHandle?[MaxPlayers];
             _disconnectedPlayerSlots = new bool[MaxPlayers];
+            _liveTx = new Tx(_session);
             _currentState = PlayerState.NotReady;
         }
 
@@ -106,7 +114,10 @@ namespace TopSpeed.Race
             _snapshotTickNow = 0f;
             _hasSnapshotTickNow = false;
             _sendFailureAnnounced = false;
+            _liveFailureAnnounced = false;
             Array.Clear(_disconnectedPlayerSlots, 0, _disconnectedPlayerSlots.Length);
+            _remoteLiveStates.Clear();
+            _liveTx.Resume();
 
             var rowSpacing = Math.Max(10.0f, _car.LengthM * 1.5f);
             var positionX = CalculateGridStartX(_playerNumber, _car.WidthM, StartLineY);
@@ -135,7 +146,9 @@ namespace TopSpeed.Race
             }
             _remotePlayers.Clear();
             _remoteMediaTransfers.Clear();
+            _remoteLiveStates.Clear();
             _snapshotFrames.Clear();
+            _liveTx.Dispose();
 
             DisposePositionSounds(
                 _soundPlayerNr,
@@ -160,6 +173,7 @@ namespace TopSpeed.Race
                 foreach (var remote in _remotePlayers.Values)
                     remote.Player.UpdateRemoteAudio(_car.PositionX, _car.PositionY, spatialTrackLength, elapsed);
             });
+            DrainRemoteLiveFrames();
 
             if (_started
                 && !_sentFinish
@@ -196,6 +210,14 @@ namespace TopSpeed.Race
 
             HandlePlayerNumberRequest(_playerNumber);
             HandleGeneralInfoRequests(ref _pauseKeyReleased);
+            if (!_liveTx.Update(elapsed, out var liveError))
+            {
+                if (!_liveFailureAnnounced)
+                {
+                    _liveFailureAnnounced = true;
+                    SpeakText(liveError);
+                }
+            }
 
             _sendAccumulator += elapsed;
             if (_sendAccumulator >= SendIntervalSeconds)
@@ -246,6 +268,7 @@ namespace TopSpeed.Race
 
         public void Pause()
         {
+            _liveTx.Pause();
             PauseCore(() =>
             {
                 foreach (var remote in _remotePlayers.Values)
@@ -255,6 +278,7 @@ namespace TopSpeed.Race
 
         public void Unpause()
         {
+            _liveTx.Resume();
             UnpauseCore(() =>
             {
                 foreach (var remote in _remotePlayers.Values)
@@ -264,8 +288,14 @@ namespace TopSpeed.Race
 
         protected override void OnLocalRadioMediaLoaded(uint mediaId, string mediaPath)
         {
-            if (!TrySendRace(_session.SendRadioMediaStreamed(mediaId, mediaPath), "radio media"))
-                SpeakText("Failed to transmit radio media.");
+            if (!_liveTx.SetMedia(mediaId, mediaPath, out var error))
+                SpeakText(error);
+        }
+
+        protected override void OnLocalRadioPlaybackChanged(bool loaded, bool playing, uint mediaId)
+        {
+            if (!_liveTx.SetPlayback(loaded, playing, mediaId, out var error))
+                SpeakText(error);
         }
 
         private bool TrySendRace(bool sent, string action)

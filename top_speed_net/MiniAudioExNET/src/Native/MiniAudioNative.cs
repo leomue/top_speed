@@ -4175,7 +4175,7 @@ namespace MiniAudioEx.Native
         public static extern ma_result ma_sound_init_from_file(ma_engine_ptr pEngine, string pFilePath, ma_sound_flags flags, ma_sound_group_ptr pGroup, ma_fence_ptr pDoneFence, ma_sound_ptr pSound);
 
         [DllImport(LIB_MINIAUDIO_EX, CallingConvention = CallingConvention.Cdecl)]
-        public static extern ma_result ma_sound_init_from_file_w(ma_engine_ptr pEngine, string pFilePath, ma_sound_flags flags, ma_sound_group_ptr pGroup, ma_fence_ptr pDoneFence, ma_sound_ptr pSound);
+        public static extern ma_result ma_sound_init_from_file_w(ma_engine_ptr pEngine, [MarshalAs(UnmanagedType.LPWStr)] string pFilePath, ma_sound_flags flags, ma_sound_group_ptr pGroup, ma_fence_ptr pDoneFence, ma_sound_ptr pSound);
 
         [DllImport(LIB_MINIAUDIO_EX, CallingConvention = CallingConvention.Cdecl)]
         public static extern ma_result ma_sound_init_from_memory(ma_engine_ptr pEngine, IntPtr pData, ma_uint64 dataSize, ma_sound_flags flags, ma_sound_group_ptr pGroup, ma_fence_ptr pDoneFence, ma_sound_ptr pSound);
@@ -4795,7 +4795,7 @@ namespace MiniAudioEx.Native
         public static extern ma_result ma_decoder_init_vfs(ma_vfs_ptr pVFS, string pFilePath, ref ma_decoder_config pConfig, ma_decoder_ptr pDecoder);
 
         [DllImport(LIB_MINIAUDIO_EX, CallingConvention = CallingConvention.Cdecl)]
-        public static extern ma_result ma_decoder_init_vfs_w(ma_vfs_ptr pVFS, string pFilePath, ref ma_decoder_config pConfig, ma_decoder_ptr pDecoder);
+        public static extern ma_result ma_decoder_init_vfs_w(ma_vfs_ptr pVFS, [MarshalAs(UnmanagedType.LPWStr)] string pFilePath, ref ma_decoder_config pConfig, ma_decoder_ptr pDecoder);
 
         [DllImport(LIB_MINIAUDIO_EX, CallingConvention = CallingConvention.Cdecl)]
         public static extern ma_result ma_decoder_init_file(string pFilePath, ref ma_decoder_config pConfig, ma_decoder_ptr pDecoder);
@@ -4807,7 +4807,7 @@ namespace MiniAudioEx.Native
         }
 
         [DllImport(LIB_MINIAUDIO_EX, CallingConvention = CallingConvention.Cdecl)]
-        public static extern ma_result ma_decoder_init_file_w(string pFilePath, ref ma_decoder_config pConfig, ma_decoder_ptr pDecoder);
+        public static extern ma_result ma_decoder_init_file_w([MarshalAs(UnmanagedType.LPWStr)] string pFilePath, ref ma_decoder_config pConfig, ma_decoder_ptr pDecoder);
 
         [DllImport(LIB_MINIAUDIO_EX, CallingConvention = CallingConvention.Cdecl)]
         public static extern ma_result ma_decoder_uninit(ma_decoder_ptr pDecoder);
@@ -4825,7 +4825,7 @@ namespace MiniAudioEx.Native
                 }
                 else
                 {
-                    ma_uint64* pointer = (ma_uint64*)pFramesOut.ToPointer();
+                    ma_uint64* pointer = (ma_uint64*)pFramesRead.ToPointer();
                     return ma_decoder_read_pcm_frames(pDecoder, pFramesOut, frameCount, pointer);
                 }
             }

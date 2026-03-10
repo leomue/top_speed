@@ -99,7 +99,16 @@ namespace MiniAudioEx.Core.AdvancedAPI
 
 			ma_sound_group_ptr pGroup = group == null ? default : group.Handle;
 
-			result = MiniAudioNative.ma_sound_init_from_file(engine.Handle, filePath, flags, pGroup, default, handle);
+			if (ContainsNonAscii(filePath))
+			{
+				result = MiniAudioNative.ma_sound_init_from_file_w(engine.Handle, filePath, flags, pGroup, default, handle);
+				if (result != ma_result.success)
+					result = MiniAudioNative.ma_sound_init_from_file(engine.Handle, filePath, flags, pGroup, default, handle);
+			}
+			else
+			{
+				result = MiniAudioNative.ma_sound_init_from_file(engine.Handle, filePath, flags, pGroup, default, handle);
+			}
 
 			if (result != ma_result.success)
 				return result;
@@ -348,6 +357,19 @@ namespace MiniAudioEx.Core.AdvancedAPI
 			MiniAudioNative.ma_sound_stop(handle);
 			MiniAudioNative.ma_sound_uninit(handle);
 			isSoundLoaded = false;
+		}
+
+		private static bool ContainsNonAscii(string value)
+		{
+			if (string.IsNullOrEmpty(value))
+				return false;
+			for (var i = 0; i < value.Length; i++)
+			{
+				if (value[i] > 127)
+					return true;
+			}
+
+			return false;
 		}
 	}
 }

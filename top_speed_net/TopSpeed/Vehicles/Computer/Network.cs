@@ -1,5 +1,6 @@
 using System;
 using TopSpeed.Audio;
+using TopSpeed.Protocol;
 
 namespace TopSpeed.Vehicles
 {
@@ -202,7 +203,19 @@ namespace TopSpeed.Vehicles
             _radioMediaId = loaded ? mediaId : 0u;
             if (!loaded)
             {
+                _liveRadio.SetPlayback(false);
+                _liveRadio.Stop(0);
                 _radio.ClearMedia();
+                return;
+            }
+
+            if (_liveRadio.IsActive && mediaId != 0 && _liveRadio.StreamId != mediaId)
+                _liveRadio.Stop(0);
+
+            _liveRadio.SetPlayback(_radioPlaying);
+            if (_liveRadio.IsActive)
+            {
+                _radio.SetPlayback(false);
                 return;
             }
 
@@ -216,11 +229,38 @@ namespace TopSpeed.Vehicles
         {
             if (mediaId == 0 || data == null || data.Length == 0)
                 return;
+            if (_liveRadio.IsActive)
+                return;
             if (!_radio.TryLoadFromBytes(data, extension, mediaId, preservePlaybackState: true, out _))
                 return;
             _radioLoaded = true;
             _radioMediaId = mediaId;
             _radio.SetPlayback(_radioPlaying);
+        }
+
+        public bool ApplyLiveStart(uint streamId, LiveCodec codec, ushort sampleRate, byte channels, byte frameMs)
+        {
+            var started = _liveRadio.Start(streamId, codec, sampleRate, channels, frameMs);
+            if (started)
+                _liveRadio.SetPlayback(true);
+            return started;
+        }
+
+        public bool ApplyLiveFrame(uint streamId, byte[] payload, uint timestamp)
+        {
+            return _liveRadio.PushFrame(streamId, payload, timestamp);
+        }
+
+        public void ApplyLiveStop(uint streamId)
+        {
+            _liveRadio.Stop(streamId);
+            if (_radioLoaded)
+                _radio.SetPlayback(_radioPlaying);
+        }
+
+        public void StopLiveStream()
+        {
+            _liveRadio.Stop(0);
         }
     }
 }

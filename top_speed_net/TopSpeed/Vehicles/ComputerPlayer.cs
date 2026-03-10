@@ -10,6 +10,7 @@ using TopSpeed.Data;
 using TopSpeed.Input;
 using TopSpeed.Protocol;
 using TopSpeed.Tracks;
+using TopSpeed.Vehicles.Live;
 using TS.Audio;
 
 namespace TopSpeed.Vehicles
@@ -114,6 +115,7 @@ namespace TopSpeed.Vehicles
         private bool _audioInitialized;
         private float _lastAudioUpdateTime;
         private readonly VehicleRadioController _radio;
+        private readonly LiveRadio _liveRadio;
         private bool _radioLoaded;
         private bool _radioPlaying;
         private uint _radioMediaId;
@@ -154,6 +156,7 @@ namespace TopSpeed.Vehicles
             _events = new List<BotEvent>();
             _legacyRoot = Path.Combine(AssetPaths.SoundsRoot, "Legacy");
             _radio = new VehicleRadioController(audio);
+            _liveRadio = new LiveRadio(audio, settings);
 
             _surface = TrackSurface.Asphalt;
             _gear = 1;

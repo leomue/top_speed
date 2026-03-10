@@ -109,6 +109,13 @@ namespace TopSpeed.Audio
             return CreateSpatialSource(path, streamFromDisk: false, allowHrtf: allowHrtf);
         }
 
+        public AudioSourceHandle CreateProceduralSource(ProceduralAudioCallback callback, uint channels = 1, uint sampleRate = 44100, bool useHrtf = true)
+        {
+            if (callback == null)
+                throw new ArgumentNullException(nameof(callback));
+            return _output.CreateProceduralSource(callback, channels, sampleRate, useHrtf);
+        }
+
         public bool TryResolvePath(string path, out string fullPath)
         {
             fullPath = string.Empty;

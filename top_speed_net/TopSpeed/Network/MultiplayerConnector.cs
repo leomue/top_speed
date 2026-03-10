@@ -2,7 +2,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using LiteNetLib;
@@ -273,13 +272,10 @@ namespace TopSpeed.Network
         private static byte[] BuildPlayerHelloPacket(string callSign)
         {
             var buffer = new byte[2 + ProtocolConstants.MaxPlayerNameLength];
-            buffer[0] = ProtocolConstants.Version;
-            buffer[1] = (byte)Command.PlayerHello;
-            var bytes = Encoding.ASCII.GetBytes(callSign ?? string.Empty);
-            var count = Math.Min(bytes.Length, ProtocolConstants.MaxPlayerNameLength);
-            Array.Copy(bytes, 0, buffer, 2, count);
-            for (var i = 2 + count; i < buffer.Length; i++)
-                buffer[i] = 0;
+            var writer = new PacketWriter(buffer);
+            writer.WriteByte(ProtocolConstants.Version);
+            writer.WriteByte((byte)Command.PlayerHello);
+            writer.WriteFixedString(callSign ?? string.Empty, ProtocolConstants.MaxPlayerNameLength);
             return buffer;
         }
 

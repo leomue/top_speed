@@ -8,10 +8,6 @@ namespace TopSpeed.Server.Config
     internal sealed class ServerSettingsStore
     {
         private readonly string _path;
-        private readonly JsonSerializerOptions _options = new JsonSerializerOptions
-        {
-            WriteIndented = true
-        };
 
         public ServerSettingsStore(string path)
         {
@@ -30,7 +26,9 @@ namespace TopSpeed.Server.Config
             try
             {
                 var json = File.ReadAllText(_path);
-                var settings = JsonSerializer.Deserialize<ServerSettings>(json, _options);
+                var settings = JsonSerializer.Deserialize(
+                    json,
+                    ServerSettingsJsonContext.Default.ServerSettings);
                 return settings ?? new ServerSettings();
             }
             catch (Exception ex)
@@ -47,7 +45,9 @@ namespace TopSpeed.Server.Config
                 var directory = Path.GetDirectoryName(_path);
                 if (!string.IsNullOrWhiteSpace(directory))
                     Directory.CreateDirectory(directory);
-                var json = JsonSerializer.Serialize(settings, _options);
+                var json = JsonSerializer.Serialize(
+                    settings,
+                    ServerSettingsJsonContext.Default.ServerSettings);
                 File.WriteAllText(_path, json);
             }
             catch (Exception ex)

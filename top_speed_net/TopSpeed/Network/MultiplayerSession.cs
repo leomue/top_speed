@@ -14,6 +14,7 @@ namespace TopSpeed.Network
         private readonly ConcurrentQueue<IncomingPacket> _incoming;
         private readonly Sender _sender;
         private readonly Media _media;
+        private readonly LiveSend _live;
         private readonly Loop _loop;
         private Action<IncomingPacket>? _packetSink;
         private byte _playerNumber;
@@ -33,6 +34,7 @@ namespace TopSpeed.Network
             _incoming = incoming ?? throw new ArgumentNullException(nameof(incoming));
             _sender = new Sender(peer ?? throw new ArgumentNullException(nameof(peer)));
             _media = new Media(_sender);
+            _live = new LiveSend(_sender);
             PlayerId = playerId;
             _playerNumber = playerNumber;
             Motd = motd ?? string.Empty;
@@ -106,6 +108,21 @@ namespace TopSpeed.Network
         public bool SendRadioMediaStreamed(uint mediaId, string filePath)
         {
             return _media.TrySendStreamed(PlayerId, PlayerNumber, mediaId, filePath);
+        }
+
+        public bool SendLiveStart(uint streamId, LiveAudioProfile profile)
+        {
+            return _live.TrySendStart(PlayerId, PlayerNumber, streamId, profile);
+        }
+
+        public bool SendLiveFrame(uint streamId, in LiveOpusFrame frame)
+        {
+            return _live.TrySendFrame(PlayerId, PlayerNumber, streamId, frame);
+        }
+
+        public bool SendLiveStop(uint streamId)
+        {
+            return _live.TrySendStop(PlayerId, PlayerNumber, streamId);
         }
 
         public bool SendPlayerStarted()
@@ -208,6 +225,7 @@ namespace TopSpeed.Network
 
         public void Dispose()
         {
+            _live.Reset();
             _loop.Dispose();
             _manager.Stop();
         }

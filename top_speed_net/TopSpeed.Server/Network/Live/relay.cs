@@ -1,0 +1,120 @@
+using System;
+using TopSpeed.Protocol;
+using TopSpeed.Server.Protocol;
+
+namespace TopSpeed.Server.Network
+{
+    internal sealed partial class RaceServer
+    {
+        private static readonly TimeSpan LiveTimeout = TimeSpan.FromMilliseconds(ProtocolConstants.LiveTimeoutMs);
+
+        private void OnLiveStart(PlayerConnection player, PacketPlayerLiveStart start)
+        {
+            if (!player.RoomId.HasValue || !_rooms.TryGetValue(player.RoomId.Value, out var room))
+                return;
+            if (start.PlayerId != player.Id || start.PlayerNumber != player.PlayerNumber)
+                return;
+            if (!IsValidLiveStart(start))
+                return;
+
+            if (player.Live != null)
+                StopLive(player, room, notifyRoom: true);
+
+            player.Live = new LiveState
+            {
+                StreamId = start.StreamId,
+                Codec = start.Codec,
+                SampleRate = start.SampleRate,
+                Channels = start.Channels,
+                FrameMs = start.FrameMs,
+                NextSequence = 0,
+                HasSequence = false,
+                LastFrameUtc = DateTime.UtcNow
+            };
+
+            SendToRoomExceptOnStream(
+                room,
+                player.Id,
+                PacketSerializer.WritePlayerLiveStart(new PacketPlayerLiveStart
+                {
+                    PlayerId = player.Id,
+                    PlayerNumber = player.PlayerNumber,
+                    StreamId = start.StreamId,
+                    Codec = start.Codec,
+                    SampleRate = start.SampleRate,
+                    Channels = start.Channels,
+                    FrameMs = start.FrameMs
+                }),
+                PacketStream.Live,
+                PacketDeliveryKind.ReliableOrdered);
+        }
+
+        private void OnLiveFrame(PlayerConnection player, PacketPlayerLiveFrame frame)
+        {
+            if (!player.RoomId.HasValue || !_rooms.TryGetValue(player.RoomId.Value, out var room))
+                return;
+            if (frame.PlayerId != player.Id || frame.PlayerNumber != player.PlayerNumber)
+                return;
+
+            var live = player.Live;
+            if (live == null)
+                return;
+            if (live.StreamId != frame.StreamId)
+                return;
+            if (frame.Data == null || frame.Data.Length == 0 || frame.Data.Length > ProtocolConstants.MaxLiveFrameBytes)
+                return;
+
+            if (live.HasSequence && frame.Sequence != live.NextSequence)
+                return;
+
+            live.HasSequence = true;
+            live.NextSequence = unchecked((ushort)(frame.Sequence + 1));
+            live.LastFrameUtc = DateTime.UtcNow;
+
+            SendToRoomExceptOnStream(
+                room,
+                player.Id,
+                PacketSerializer.WritePlayerLiveFrame(new PacketPlayerLiveFrame
+                {
+                    PlayerId = player.Id,
+                    PlayerNumber = player.PlayerNumber,
+                    StreamId = live.StreamId,
+                    Sequence = frame.Sequence,
+                    Timestamp = frame.Timestamp,
+                    Data = frame.Data
+                }),
+                PacketStream.Live);
+        }
+
+        private void OnLiveStop(PlayerConnection player, PacketPlayerLiveStop stop)
+        {
+            if (!player.RoomId.HasValue || !_rooms.TryGetValue(player.RoomId.Value, out var room))
+                return;
+            if (stop.PlayerId != player.Id || stop.PlayerNumber != player.PlayerNumber)
+                return;
+
+            var live = player.Live;
+            if (live == null)
+                return;
+            if (live.StreamId != stop.StreamId)
+                return;
+
+            StopLive(player, room, notifyRoom: true);
+        }
+
+        private static bool IsValidLiveStart(PacketPlayerLiveStart start)
+        {
+            if (start.StreamId == 0)
+                return false;
+            if (start.Codec != LiveCodec.Opus)
+                return false;
+            if (start.SampleRate != ProtocolConstants.LiveSampleRate)
+                return false;
+            if (start.FrameMs != ProtocolConstants.LiveFrameMs)
+                return false;
+            if (start.Channels < ProtocolConstants.LiveChannelsMin || start.Channels > ProtocolConstants.LiveChannelsMax)
+                return false;
+            return true;
+        }
+    }
+}

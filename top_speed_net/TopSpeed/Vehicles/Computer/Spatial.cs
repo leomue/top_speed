@@ -61,6 +61,7 @@ namespace TopSpeed.Vehicles
             SetSpatial(_soundBump, position, velocity);
             SetSpatial(_soundMiniCrash, position, velocity);
             _radio.UpdateSpatial(worldX, worldZ, velUnits);
+            _liveRadio.UpdateSpatial(position, velocity);
         }
 
         private static void SetSpatial(AudioSourceHandle? sound, Vector3 position, Vector3 velocity)

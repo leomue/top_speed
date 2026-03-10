@@ -39,6 +39,7 @@ namespace TopSpeed.Server.Network
             RegisterCorePackets();
             RegisterRacePackets();
             RegisterMediaPackets();
+            RegisterLivePackets();
             RegisterRoomPackets();
         }
 

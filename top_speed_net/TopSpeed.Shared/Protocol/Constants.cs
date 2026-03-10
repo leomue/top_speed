@@ -7,6 +7,12 @@ namespace TopSpeed.Protocol
         public const int MaxMediaFileExtensionLength = 16;
         public const int MaxMediaBytes = 8 * 1024 * 1024;
         public const int MaxMediaChunkBytes = 900;
+        public const int MaxLiveFrameBytes = 1200;
+        public const int LiveSampleRate = 48000;
+        public const int LiveFrameMs = 60;
+        public const int LiveChannelsMin = 1;
+        public const int LiveChannelsMax = 2;
+        public const int LiveTimeoutMs = 3000;
         public const byte PacketVersion = ProtocolVersionInfo.PacketVersion;
         public const byte Version = PacketVersion;
         public const int DefaultFrequency = 22050;

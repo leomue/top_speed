@@ -25,6 +25,7 @@ namespace TopSpeed.Vehicles
         {
             _soundEngine.Stop();
             _radio.PauseForGame();
+            _liveRadio.Stop(0);
         }
 
         public void PendingStart(float baseDelay)
@@ -137,6 +138,7 @@ namespace TopSpeed.Vehicles
         public void Pause()
         {
             _radio.PauseForGame();
+            _liveRadio.PauseForGame();
             if (_state == ComputerState.Starting)
                 _soundStart.Stop();
             else if (_state == ComputerState.Running || _state == ComputerState.Stopping)
@@ -160,6 +162,7 @@ namespace TopSpeed.Vehicles
         public void Unpause()
         {
             _radio.ResumeFromGame();
+            _liveRadio.ResumeFromGame();
             if (_state == ComputerState.Starting)
                 _soundStart.Play(loop: false);
             else if (_state == ComputerState.Running || _state == ComputerState.Stopping)
@@ -177,6 +180,7 @@ namespace TopSpeed.Vehicles
             _soundBump.Dispose();
             _soundBackfire?.Dispose();
             _radio.Dispose();
+            _liveRadio.Dispose();
         }
     }
 }

@@ -74,6 +74,7 @@ namespace TopSpeed.Server.Network
             if (!_rooms.TryGetValue(roomId, out var room))
             {
                 player.RoomId = null;
+                player.Live = null;
                 SendRoomState(player, null);
                 return;
             }
@@ -87,6 +88,7 @@ namespace TopSpeed.Server.Network
             player.State = PlayerState.NotReady;
             room.PendingLoadouts.Remove(player.Id);
             room.MediaMap.Remove(player.Id);
+            StopLive(player, room, notifyRoom: notify);
             player.IncomingMedia = null;
             player.MediaLoaded = false;
             player.MediaPlaying = false;
@@ -140,6 +142,7 @@ namespace TopSpeed.Server.Network
             SendStream(player, PacketSerializer.WritePlayerNumber(player.Id, player.PlayerNumber), PacketStream.Control);
             SendTrack(room, player);
             SyncMediaTo(room, player);
+            SyncLiveTo(room, player);
             TouchRoomVersion(room);
             SendRoomState(player, room);
             EmitRoomParticipantEvent(

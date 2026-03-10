@@ -47,6 +47,7 @@
 // SOFTWARE.
 
 using System;
+using System.Runtime.InteropServices;
 using MiniAudioEx.Native;
 
 namespace MiniAudioEx.Core.AdvancedAPI
@@ -109,7 +110,19 @@ namespace MiniAudioEx.Core.AdvancedAPI
 			if (isLoaded)
 				Unload();
 
-			return MiniAudioNative.ma_decoder_init_file(filePath, ref config, handle);
+			ma_result result;
+			if (ContainsNonAscii(filePath))
+			{
+				result = MiniAudioNative.ma_decoder_init_file_w(filePath, ref config, handle);
+				if (result != ma_result.success)
+					result = MiniAudioNative.ma_decoder_init_file(filePath, ref config, handle);
+			}
+			else
+			{
+				result = MiniAudioNative.ma_decoder_init_file(filePath, ref config, handle);
+			}
+			isLoaded = result == ma_result.success;
+			return result;
 		}
 
 		public ma_result IntializeFromMemory(IntPtr pData, UInt64 dataSize)
@@ -126,7 +139,46 @@ namespace MiniAudioEx.Core.AdvancedAPI
 			if (isLoaded)
 				Unload();
 
-			return MiniAudioNative.ma_decoder_init_memory(pData, new UIntPtr(dataSize), ref config, handle);
+			ma_result result = MiniAudioNative.ma_decoder_init_memory(pData, new UIntPtr(dataSize), ref config, handle);
+			isLoaded = result == ma_result.success;
+			return result;
+		}
+
+		public ma_result ReadPCMFrames(short[] framesOut, UInt64 frameCount, out UInt64 framesRead)
+		{
+			return ReadPCMFrames(framesOut, 0, frameCount, out framesRead);
+		}
+
+		public ma_result ReadPCMFrames(short[] framesOut, int sampleOffset, UInt64 frameCount, out UInt64 framesRead)
+		{
+			framesRead = 0;
+
+			if (handle.pointer == IntPtr.Zero || !isLoaded)
+				return ma_result.error;
+			if (framesOut == null)
+				return ma_result.invalid_args;
+			if (sampleOffset < 0 || sampleOffset > framesOut.Length)
+				return ma_result.invalid_args;
+
+			GCHandle pinned = default(GCHandle);
+			IntPtr readPtr = IntPtr.Zero;
+			try
+			{
+				pinned = GCHandle.Alloc(framesOut, GCHandleType.Pinned);
+				IntPtr framePtr = Marshal.UnsafeAddrOfPinnedArrayElement(framesOut, sampleOffset);
+				readPtr = Marshal.AllocHGlobal(sizeof(long));
+				Marshal.WriteInt64(readPtr, 0);
+				ma_result result = MiniAudioNative.ma_decoder_read_pcm_frames(handle, framePtr, frameCount, readPtr);
+				framesRead = unchecked((UInt64)Marshal.ReadInt64(readPtr));
+				return result;
+			}
+			finally
+			{
+				if (readPtr != IntPtr.Zero)
+					Marshal.FreeHGlobal(readPtr);
+				if (pinned.IsAllocated)
+					pinned.Free();
+			}
 		}
 
 		public ma_result SeekToPCMFrame(UInt64 frameIndex)
@@ -146,7 +198,7 @@ namespace MiniAudioEx.Core.AdvancedAPI
 
 		public ma_result GetLengthInPCMFrames(out UInt64 length)
 		{
-			return MiniAudioNative.ma_decoder_get_cursor_in_pcm_frames(handle, out length);
+			return MiniAudioNative.ma_decoder_get_length_in_pcm_frames(handle, out length);
 		}
 
 		public ma_result GetAvailableFrames(out UInt64 availableFrames)
@@ -165,6 +217,19 @@ namespace MiniAudioEx.Core.AdvancedAPI
 			MiniAudioNative.ma_decoder_uninit(handle);
 
 			isLoaded = false;
+		}
+
+		private static bool ContainsNonAscii(string value)
+		{
+			if (string.IsNullOrEmpty(value))
+				return false;
+			for (var i = 0; i < value.Length; i++)
+			{
+				if (value[i] > 127)
+					return true;
+			}
+
+			return false;
 		}
 	}
 }

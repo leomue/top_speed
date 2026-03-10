@@ -78,6 +78,7 @@ namespace TopSpeed.Vehicles
             SetOtherEventVolumePercent(_soundBump, 100);
             SetOtherEventVolumePercent(_soundBackfire, 100);
             _radio.SetVolumePercent(radioPercent);
+            _liveRadio.SetVolumePercent(radioPercent);
         }
 
         private void SetOtherEngineVolumePercent(AudioSourceHandle? sound, int percent)
