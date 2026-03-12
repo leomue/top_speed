@@ -1,7 +1,8 @@
 {
-  "version": "2026.3.11.5",
+  "version": "2026.3.12.1",
   "serverVersion": "2026.3.11.4",
   "changes": [
+    "Improved vehicle control consistency during high-speed driving.",
     "Room options in multiplayer now use a local draft with explicit confirm or cancel, so rapid option changes no longer send requests one by one.",
     "Track selection in room options now uses a full track flow (race track, street adventure, random) instead of a radio toggle.",
     "Closing loadout now asks whether to quit race preparation; choosing yes keeps the player in the room and excludes them from the current preparation round.",

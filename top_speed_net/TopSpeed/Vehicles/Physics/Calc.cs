@@ -69,11 +69,7 @@ namespace TopSpeed.Vehicles
                 return;
             }
 
-            var steeringCommandAccel = (_currentSteering / 100.0f) * _steering;
-            if (steeringCommandAccel > 1.0f)
-                steeringCommandAccel = 1.0f;
-            else if (steeringCommandAccel < -1.0f)
-                steeringCommandAccel = -1.0f;
+            var steeringCommandAccel = ComputeGripSteeringCommand(speedMpsCurrent);
 
             var steerRadAccel = (float)(Math.PI / 180.0) * (_maxSteerDeg * steeringCommandAccel);
             var curvatureAccel = (float)Math.Tan(steerRadAccel) / _wheelbaseM;
@@ -81,8 +77,15 @@ namespace TopSpeed.Vehicles
             var desiredLatAccelAbs = Math.Abs(desiredLatAccel);
             var grip = _tireGripCoefficient * surfaceTractionMod * _lateralGripCoefficient;
             var maxLatAccel = grip * 9.80665f;
-            var lateralRatio = maxLatAccel > 0f ? Math.Min(1.0f, desiredLatAccelAbs / maxLatAccel) : 0f;
+            var speedFactor = ComputeSteeringSpeedFactor(speedMpsCurrent);
+            var lateralRatioScale = 1.0f + (0.85f * speedFactor);
+            var lateralRatio = maxLatAccel > 0f ? Math.Min(1.0f, desiredLatAccelAbs / (maxLatAccel * lateralRatioScale)) : 0f;
             longitudinalGripFactor = (float)Math.Sqrt(Math.Max(0.0, 1.0 - (lateralRatio * lateralRatio)));
+            var longitudinalGripFloor = ComputeLongitudinalGripFloor(speedMpsCurrent);
+            if (longitudinalGripFactor < longitudinalGripFloor)
+                longitudinalGripFactor = longitudinalGripFloor;
+            if (longitudinalGripFactor > 1.0f)
+                longitudinalGripFactor = 1.0f;
 
             var driveRpm = CalculateDriveRpm(speedMpsCurrent, throttle);
             var engineTorque = CalculateEngineTorqueNm(driveRpm) * throttle * _powerFactor;
@@ -207,11 +210,15 @@ namespace TopSpeed.Vehicles
             }
 
             var surfaceMultiplier = _surface == TrackSurface.Snow ? 1.44f : 1.0f;
-            var steeringCommandLat = (_currentSteering / 100.0f) * _steering;
-            if (steeringCommandLat > 1.0f)
-                steeringCommandLat = 1.0f;
-            else if (steeringCommandLat < -1.0f)
-                steeringCommandLat = -1.0f;
+            var bikeLikeFactor = ComputeBikeLikeFactor();
+            var steeringSpeedFactor = ComputeSteeringSpeedFactor(speedMps);
+            var steeringCommandLat = ComputeSteeringCommand(speedMps, bikeLikeFactor);
+            var commandBoost = 1.0f + ((0.95f + (0.85f * bikeLikeFactor)) * steeringSpeedFactor);
+            steeringCommandLat *= commandBoost;
+            if (steeringCommandLat > 2.45f)
+                steeringCommandLat = 2.45f;
+            else if (steeringCommandLat < -2.45f)
+                steeringCommandLat = -2.45f;
             var steerRadLat = (float)(Math.PI / 180.0) * (_maxSteerDeg * steeringCommandLat);
             var curvatureLat = (float)Math.Tan(steerRadLat) / _wheelbaseM;
             var surfaceTractionModLat = _surfaceTractionFactor > 0f ? _currentSurfaceTractionFactor / _surfaceTractionFactor : 1.0f;
@@ -226,8 +233,11 @@ namespace TopSpeed.Vehicles
                 stabilityScale = 0.2f;
             else if (stabilityScale > 1.0f)
                 stabilityScale = 1.0f;
-            var responseTime = BaseLateralSpeed / 20.0f;
-            var maxLatSpeed = maxLatAccelLat * responseTime * stabilityScale;
+            var stabilityRelief = 1.0f + (0.45f * steeringSpeedFactor);
+            var responseTime = (BaseLateralSpeed / 20.0f) * (0.78f + (1.28f * steeringSpeedFactor));
+            var highSpeedAgility = 1.0f + ((0.90f + (0.95f * bikeLikeFactor)) * steeringSpeedFactor);
+            var maxLatSpeed = maxLatAccelLat * responseTime * stabilityScale * highSpeedAgility;
+            maxLatSpeed *= stabilityRelief;
             var desiredLatSpeed = desiredLatAccelLat * responseTime;
             if (desiredLatSpeed > maxLatSpeed)
                 desiredLatSpeed = maxLatSpeed;
@@ -235,6 +245,86 @@ namespace TopSpeed.Vehicles
                 desiredLatSpeed = -maxLatSpeed;
             var lateralSpeed = desiredLatSpeed * surfaceMultiplier;
             _positionX += lateralSpeed * elapsed;
+        }
+
+        private float ComputeSteeringCommand(float speedMps)
+        {
+            return ComputeSteeringCommand(speedMps, ComputeBikeLikeFactor());
+        }
+
+        private float ComputeSteeringCommand(float speedMps, float bikeLikeFactor)
+        {
+            var baseCommand = (_currentSteering / 100.0f) * _steering;
+            var steeringGain = ComputeSteeringGain(speedMps, bikeLikeFactor);
+            var scaled = baseCommand * steeringGain;
+            if (scaled > 1.95f)
+                return 1.95f;
+            if (scaled < -1.95f)
+                return -1.95f;
+            return scaled;
+        }
+
+        private float ComputeGripSteeringCommand(float speedMps)
+        {
+            var baseCommand = (_currentSteering / 100.0f) * _steering;
+            var speedFactor = ComputeSteeringSpeedFactor(speedMps);
+            var gripGain = 1.0f + (0.32f * speedFactor);
+            var scaled = baseCommand * gripGain;
+            if (scaled > 1.55f)
+                return 1.55f;
+            if (scaled < -1.55f)
+                return -1.55f;
+            return scaled;
+        }
+
+        private static float ComputeSteeringSpeedFactor(float speedMps)
+        {
+            const float startMps = 90.0f / 3.6f;
+            const float endMps = 180.0f / 3.6f;
+            if (speedMps <= startMps)
+                return 0f;
+            if (speedMps >= endMps)
+                return 1f;
+            return (speedMps - startMps) / (endMps - startMps);
+        }
+
+        private static float ComputeSteeringGain(float speedMps, float bikeLikeFactor)
+        {
+            var speedFactor = ComputeSteeringSpeedFactor(speedMps);
+            var shapedFactor = (float)Math.Pow(speedFactor, 0.85);
+            var baseGain = 1.0f + (0.70f * shapedFactor);
+            var bikeGain = 1.0f + (0.45f * bikeLikeFactor * shapedFactor);
+            return baseGain * bikeGain;
+        }
+
+        private float ComputeBikeLikeFactor()
+        {
+            var widthFactor = NormalizeRange(1.05f - _widthM, 0f, 0.42f);
+            var wheelbaseFactor = NormalizeRange(1.95f - _wheelbaseM, 0f, 0.70f);
+            var massFactor = NormalizeRange(420f - _massKg, 0f, 280f);
+            var combined = (0.50f * widthFactor) + (0.30f * wheelbaseFactor) + (0.20f * massFactor);
+            if (combined < 0f)
+                return 0f;
+            if (combined > 1f)
+                return 1f;
+            return combined;
+        }
+
+        private static float NormalizeRange(float value, float min, float max)
+        {
+            if (max <= min)
+                return 0f;
+            if (value <= min)
+                return 0f;
+            if (value >= max)
+                return 1f;
+            return (value - min) / (max - min);
+        }
+
+        private static float ComputeLongitudinalGripFloor(float speedMps)
+        {
+            var speedFactor = ComputeSteeringSpeedFactor(speedMps);
+            return 0.66f + (0.20f * speedFactor);
         }
     }
 }
